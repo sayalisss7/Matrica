@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+pydantic
+pydantic-settings
+langchain
+langchain-google-genai
+langchain-community
+langchain-chroma
+chromadb
+pandas
+sqlalchemy
+python-dotenv
+pytest
+httpx
