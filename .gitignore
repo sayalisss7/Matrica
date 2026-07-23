@@ -26,3 +26,6 @@ frontend/dist/
 # data/raw/
 # data/silver/
 # data/gold/
+
+# PySpark Windows Binaries
+hadoop/

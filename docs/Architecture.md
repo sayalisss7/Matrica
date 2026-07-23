@@ -2,21 +2,30 @@
 
 ## Overall System Architecture
 ```mermaid
-graph TD;
-    User-->|Queries/Interacts| React_UI;
-    React_UI-->|API Requests| FastAPI_Backend;
-    FastAPI_Backend-->|Routes Query| LangChain_Task_Router;
+graph TD
+    User([User]) --> Frontend(React App);
+    Frontend --> Backend_API(FastAPI Server);
+    Backend_API --> Task_Router(Langchain Router);
     
-    LangChain_Task_Router-->|SQL Intent| SQL_Agent;
-    LangChain_Task_Router-->|News Intent| RAG_Agent;
+    Task_Router --> Intent_Agent(Intent Classifier);
+    Intent_Agent -->|SQL Needed| SQL_Agent;
+    Intent_Agent -->|Context Needed| RAG_Agent;
     
-    SQL_Agent-->|Executes Query| SQLite_DB(Gold Star Schema);
-    RAG_Agent-->|Searches Context| ChromaDB(Vector Store);
+    SQL_Agent-->|Executes Query| Postgres_DB(Gold Star Schema);
+    RAG_Agent-->|Semantic Search| ChromaDB(Vector Store);
     
-    SQLite_DB-->Context_Fusion;
+    Postgres_DB-->Context_Fusion;
     ChromaDB-->Context_Fusion;
-    Context_Fusion-->Gemini_LLM;
-    Gemini_LLM-->|Final Answer| FastAPI_Backend;
+    
+    Context_Fusion-->|Final Generation| Gemini(LLM);
+    Gemini-->Backend_API;
+
+    subgraph Data Pipeline
+    Raw_Data-->Bronze_Layer;
+    Bronze_Layer-->|Clean| Silver_Layer;
+    Silver_Layer-->|Star Schema| Gold_Layer;
+    Gold_Layer-->|Star Schema Loads| Postgres_DB;
+    end
 ```
 
 ## Data Engineering Pipeline (Medallion)
@@ -25,5 +34,5 @@ graph LR;
     Raw_CSVs-->|Databricks| Bronze_Layer;
     Bronze_Layer-->|Clean & Validate| Silver_Layer;
     Silver_Layer-->|Feature Engineering| Gold_Layer;
-    Gold_Layer-->|Star Schema Loads| SQLite;
+    Gold_Layer-->|Star Schema Loads| Postgres_DB;
 ```
