@@ -1,3 +1,4 @@
+
 import os
 import pandas as pd
 from langchain_groq import ChatGroq
@@ -17,11 +18,13 @@ Query: {query}
 Intent (only output the category name in uppercase):
 """
 
-import os
-from langchain_groq import ChatGroq
 
 def get_llm():
-    return ChatGroq(model=os.getenv("GROQ_MODEL"), temperature=0)
+    return ChatGroq(
+        model="llama-3.3-70b-versatile",
+        temperature=0,
+        groq_api_key=os.getenv("GROQ_API_KEY")
+    )
 
 def classify_intent(query: str) -> str:
     llm = get_llm()
