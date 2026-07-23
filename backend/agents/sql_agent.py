@@ -1,25 +1,30 @@
 import os
+from dotenv import load_dotenv
 from langchain_community.utilities import SQLDatabase
 from langchain_community.agent_toolkits import create_sql_agent
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
+
+# Load .env from the project root
+base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+load_dotenv(os.path.join(base_dir, ".env"))
 
 def get_sql_agent():
-    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    db_path = os.path.join(base_dir, 'database', 'matrica.db')
+    # Fetch PostgreSQL connection string
+    db_uri = os.getenv("DATABASE_URL")
     
-    if not os.path.exists(db_path):
-        return None
+    if not db_uri:
+        raise ValueError("DATABASE_URL environment variable is missing. Neon PostgreSQL configuration is required.")
 
-    db = SQLDatabase.from_uri(f"sqlite:///{db_path}")
+    db = SQLDatabase.from_uri(db_uri)
     
-    # We use Gemini for the SQL generation and execution
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0)
+    # We use Groq exclusively
+    llm = ChatGroq(model=os.getenv("GROQ_MODEL"), temperature=0)
     
     agent_executor = create_sql_agent(
         llm=llm,
-        toolkit=None,  # Or use SQLDatabaseToolkit(db=db, llm=llm)
+        toolkit=None,  
         db=db,
-        agent_type="openai-tools", # Gemini supports this or we can use generic react
+        agent_type="openai-tools", 
         verbose=True
     )
     return agent_executor

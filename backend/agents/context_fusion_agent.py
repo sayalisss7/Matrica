@@ -1,4 +1,4 @@
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
 from langchain_core.prompts import PromptTemplate
 
 FUSION_PROMPT = """
@@ -18,8 +18,11 @@ If the user asks about sponsorships, highlight brand alignment, demographics, an
 Do NOT mention "I retrieved this from a database". Just present the facts.
 """
 
+import os
+from langchain_groq import ChatGroq
+
 def fuse_context_and_generate(query: str, sql_results: str, rag_context: str) -> str:
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.3)
+    llm = ChatGroq(model=os.getenv("GROQ_MODEL"), temperature=0.3)
     prompt = PromptTemplate(template=FUSION_PROMPT, input_variables=["query", "sql_results", "rag_context"])
     chain = prompt | llm
     
