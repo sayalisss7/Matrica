@@ -40,5 +40,36 @@ def chat_endpoint(request: ChatRequest):
 # Additional endpoints for dashboard data would go here
 # e.g., /api/players, /api/teams, /api/tournaments
 
+class MatchRequest(BaseModel):
+    budget: float
+    popWeight: float
+    repWeight: float
+    skillWeight: float
+
+@app.post("/api/match_sponsor")
+def match_sponsor_endpoint(request: MatchRequest):
+    from backend.agents.sponsor_matching_agent import get_ranked_players, generate_sponsor_summary
+    
+    # 1. Get dynamically ranked players
+    players = get_ranked_players(
+        request.budget, 
+        request.popWeight, 
+        request.repWeight, 
+        request.skillWeight
+    )
+    
+    # 2. Get LLM Summary
+    summary = generate_sponsor_summary(
+        players, 
+        request.popWeight, 
+        request.repWeight, 
+        request.skillWeight
+    )
+    
+    return {
+        "players": players,
+        "summary": summary
+    }
+
 if __name__ == "__main__":
     uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)
