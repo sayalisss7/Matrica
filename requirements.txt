@@ -3,12 +3,15 @@ uvicorn
 pydantic
 pydantic-settings
 langchain
-langchain-google-genai
+langchain-groq
 langchain-community
 langchain-chroma
+langchain-huggingface
+sentence-transformers
 chromadb
 pandas
 sqlalchemy
 python-dotenv
 pytest
 httpx
+psycopg2-binary
