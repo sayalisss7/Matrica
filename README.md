@@ -1,57 +1,69 @@
-# Matrica - AI Powered Esports Sponsorship Intelligence Platform
+# Matrica: AI-Powered Esports Sponsorship Intelligence Platform 🏆
 
-Matrica is an enterprise-grade esports analytics platform designed to analyze Valorant esports data, answer natural language questions, combine structured match statistics with qualitative news, and recommend sponsorship opportunities.
+Matrica is an enterprise-grade esports analytics platform that uses a **Hybrid AI Architecture** to dynamically match global esports teams and brands with top-tier professional players. It fuses complex in-game performance metrics (structured data) with real-world news and brand sentiment (unstructured data).
 
-## Features
-- **Medallion Architecture**: Processes raw esports data into a structured Star Schema in PostgreSQL.
-- **RAG Architecture**: Vectorizes news articles using ChromaDB for semantic search.
-- **Agentic Backend**: Langchain router dynamically decides whether to query PostgreSQL (stats) or ChromaDB (news) based on user intent.
-- **Modern UI**: React + Tailwind frontend for dashboarding and chatting.
+Currently built for the **VALORANT Champions Tour (VCT) 2025**.
 
-## Getting Started
+## 🚀 Key Features
 
-### 1. Clone the repo
-```bash
-git clone <repo-url>
-cd matrica
+* **Dynamic Data Pipeline (Medallion Architecture)**: Fully automated ETL pipeline that extracts raw VCT tournament data, cleans it using PySpark, models it into a Star Schema, and uploads it to a production PostgreSQL database.
+* **Algorithmic Sponsor Matching**: Uses PostgreSQL math functions to dynamically calculate Player Popularity, Brand Reputation, and Estimated Budget across hundreds of professionals, matched perfectly against brand slider weights.
+* **Hybrid AI Analysis**: 
+  * **Structured**: FastAPI + PostgreSQL (`psycopg2`) handles real-time ranking algorithms.
+  * **Unstructured**: LangChain + ChromaDB handles RAG (Retrieval-Augmented Generation) on real-world news articles.
+  * **Generative**: Groq LLMs fuse the SQL rankings and ChromaDB context into a coherent, professional summary for sponsors.
+* **Modern Web Interface**: Built with React, Vite, and Tailwind CSS.
+
+## 🏗️ Architecture
+
+```mermaid
+graph TD;
+    A[Raw Bronze CSVs] -->|PySpark| B[Silver Cleaned Data];
+    B -->|PySpark| C[Gold Star Schema];
+    C -->|SQLAlchemy| D[(Neon PostgreSQL)];
+    
+    E[News Articles JSON] -->|LangChain| F[(ChromaDB Vector Store)];
+    
+    D -->|SQL Agent| G[FastAPI Backend];
+    F -->|RAG Agent| G;
+    
+    G -->|JSON API| H[React + Tailwind Frontend];
 ```
 
-### 2. Backend Setup
+## 🛠️ Tech Stack
+
+* **Data Engineering**: Apache Spark (PySpark), Jupyter, `nbconvert`
+* **Database**: Neon (Serverless PostgreSQL), ChromaDB (Vector Search)
+* **Backend**: Python, FastAPI, SQLAlchemy, LangChain, Groq LLMs (Llama 3 / Mixtral)
+* **Frontend**: React 18, TypeScript, Tailwind CSS, Vite, Axios
+
+## 💻 How to Run the Project
+
+### 1. Run the Data Pipeline (ETL Orchestrator)
+The enterprise orchestrator will automatically execute all 6 data pipeline notebooks sequentially, clean the data, and push it to your PostgreSQL database.
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
+# Activate your virtual environment
+venv\Scripts\activate
+
+# Run the Orchestrator
+python data_pipeline/orchestrator.py
 ```
 
-### 3. Environment Variables
-Create a `.env` file in the root with:
-```env
-GOOGLE_API_KEY="your-gemini-key"
-GROQ_API_KEY="your-groq-key"
-DATABASE_URL="your-neon-postgres-url"
+### 2. Start the Backend API
+```bash
+# In Terminal 1
+venv\Scripts\activate
+python backend/main.py
 ```
+*API runs on `http://localhost:8000`*
 
-### 4. Data Pipeline
-Run the ETL script to load Gold data into PostgreSQL:
+### 3. Start the Frontend Web App
 ```bash
-python data_pipeline/scripts/load_gold_postgres.py
-```
-Run the RAG ingestion to load articles into ChromaDB:
-```bash
-python rag/ingest_json.py
-```
-
-### 5. Run the Backend (FastAPI)
-```bash
-uvicorn backend.main:app --reload --port 8000
-```
-
-### 6. Run the Frontend (React)
-```bash
+# In Terminal 2
 cd frontend
-npm install
 npm run dev
 ```
+*Website runs on `http://localhost:5173`*
 
-## Architecture
-See `docs/Architecture.md` for full architecture diagrams.
+---
+*Built for the VCT 2025 Season. Data modeling and architecture designed for enterprise scalability.*
