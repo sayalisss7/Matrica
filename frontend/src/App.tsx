@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Routes, Route, NavLink } from 'react-router-dom'
 import { Home, MessageSquare, BarChart2, Moon, Sun, Sparkles, Cpu, Crosshair, ArrowRight } from 'lucide-react'
 import axios from 'axios'
@@ -28,32 +28,38 @@ const HomePage = ({ isDarkMode }: ThemeProps) => {
     ? "border-white/10 bg-black/20 text-slate-100 hover:bg-white/10 hover:border-[#ff2a2a]/50"
     : "border-transparent bg-white/40 text-slate-900 hover:bg-white/60 shadow-sm";
 
-  const recommendationCards = [
+  const [cards, setCards] = useState([
     {
-      title: "FNATIC",
-      score: "94%",
-      subtitle: "AI Match",
-      footer: "Estimated ROI ₹210K",
+      title: "Loading...",
+      score: "--",
+      subtitle: "Connecting to Matrica DB",
+      footer: "Please wait...",
     },
     {
-      title: "TENZ",
-      score: "89%",
-      subtitle: "Audience Reach",
-      footer: "3.2 Million Followers",
+      title: "Loading...",
+      score: "--",
+      subtitle: "Connecting to Matrica DB",
+      footer: "Please wait...",
     },
     {
-      title: "VCT Champions",
-      score: "81%",
-      subtitle: "Tournament Impact",
-      footer: "Global Esports Event",
+      title: "Loading...",
+      score: "--",
+      subtitle: "Connecting to Matrica DB",
+      footer: "Please wait...",
     },
     {
-      title: "Paper Rex",
-      score: "85%",
-      subtitle: "Regional Influence",
-      footer: "Pacific Audience",
-    },
-  ];
+      title: "Loading...",
+      score: "--",
+      subtitle: "Connecting to Matrica DB",
+      footer: "Please wait...",
+    }
+  ]);
+
+  useEffect(() => {
+    axios.get('http://localhost:8000/api/dashboard/recommendations')
+      .then(res => setCards(res.data))
+      .catch(err => console.error("Failed to fetch dashboard data:", err));
+  }, []);
 
   return (
 
@@ -143,7 +149,7 @@ const HomePage = ({ isDarkMode }: ThemeProps) => {
 
           <div className="grid lg:grid-cols-2 gap-6">
 
-            {recommendationCards.map((card) => (
+            {cards.map((card) => (
 
               <div
                 key={card.title}
