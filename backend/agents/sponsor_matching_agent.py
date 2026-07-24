@@ -4,6 +4,7 @@ from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain_core.prompts import PromptTemplate
+from .rag_agent import retrieve_context
 
 # Load .env
 base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -76,6 +77,13 @@ def get_ranked_players(budget, pop_w, rep_w, skill_w):
 def generate_sponsor_summary(ranked_players, pop_w, rep_w, skill_w):
     llm = ChatGroq(model=os.getenv("GROQ_MODEL"), temperature=0.3)
     
+    # ---------------------------------------------------------
+    # NEW: RAG QUALITATIVE DATA INJECTION
+    # ---------------------------------------------------------
+    player_names = [p['name'] for p in ranked_players]
+    search_query = f"Recent news and sentiment about {', '.join(player_names)}"
+    qualitative_context = retrieve_context(search_query)
+    
     prompt = PromptTemplate(
         template="""You are Matrica AI. A sponsor is looking for players with weights: 
 Popularity: {pop_w}%, Reputation: {rep_w}%, In-Game Skill: {skill_w}%.
@@ -83,8 +91,11 @@ Popularity: {pop_w}%, Reputation: {rep_w}%, In-Game Skill: {skill_w}%.
 Here are the top 3 dynamically ranked players matching their budget:
 {players}
 
-Write a short, punchy 2-paragraph summary explaining why the #1 ranked player is the absolute best choice for them based on their specific weight preferences. Don't mention the database. Be very professional.""",
-        input_variables=["pop_w", "rep_w", "skill_w", "players"]
+Here is some qualitative context from our NLP database (recent articles/sentiment) about these players:
+{context}
+
+Write a short, punchy 2-paragraph summary explaining why the #1 ranked player is the absolute best choice for them based on their specific weight preferences and the qualitative context provided. Don't mention the database. Be very professional.""",
+        input_variables=["pop_w", "rep_w", "skill_w", "players", "context"]
     )
     
     chain = prompt | llm
@@ -92,7 +103,8 @@ Write a short, punchy 2-paragraph summary explaining why the #1 ranked player is
         "pop_w": pop_w,
         "rep_w": rep_w,
         "skill_w": skill_w,
-        "players": json.dumps(ranked_players, indent=2)
+        "players": json.dumps(ranked_players, indent=2),
+        "context": qualitative_context
     })
     
     return res.content

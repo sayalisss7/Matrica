@@ -38,7 +38,7 @@ python data_pipeline/scripts/load_gold_postgres.py
 ```
 Run the RAG ingestion to load articles into ChromaDB:
 ```bash
-python rag/ingest.py
+python rag/ingest_json.py
 ```
 
 ### 5. Run the Backend (FastAPI)

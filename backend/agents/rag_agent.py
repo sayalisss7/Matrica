@@ -9,8 +9,8 @@ def get_rag_retriever():
     if not os.path.exists(chroma_dir):
         return None
 
-    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-    vectorstore = Chroma(persist_directory=chroma_dir, embedding_function=embeddings, collection_name="esports_articles")
+    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    vectorstore = Chroma(persist_directory=chroma_dir, embedding_function=embeddings, collection_name="valorant_news")
     return vectorstore.as_retriever(search_kwargs={"k": 3})
 
 def retrieve_context(query: str) -> str:
