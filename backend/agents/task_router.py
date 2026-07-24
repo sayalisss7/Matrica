@@ -13,7 +13,7 @@ def handle_query(query: str) -> dict:
     
     # 2. Route based on intent
     # If the question is about stats, players, teams, or tournaments, we definitely need SQL
-    if intent in ["PLAYER", "TEAM", "TOURNAMENT", "GENERAL", "SPONSOR"]:
+    if intent in ["PLAYER", "TEAM", "TOURNAMENT", "GENERAL"]:
         sql_results = run_sql_query(query)
         context_used.append("SQL Database")
     

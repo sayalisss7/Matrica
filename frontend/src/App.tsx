@@ -134,6 +134,8 @@ const Sponsors = () => {
 }
 
 
+import ReactMarkdown from 'react-markdown'
+
 const Chat = () => {
   const [messages, setMessages] = useState<{role: string, content: string}[]>([])
   const [input, setInput] = useState('')
@@ -159,10 +161,16 @@ const Chat = () => {
   return (
     <div className="p-8 flex flex-col h-full max-h-screen">
       <h1 className="text-3xl font-bold mb-4">AI Chat</h1>
-      <div className="flex-1 bg-gray-900 rounded-lg p-4 mb-4 overflow-y-auto space-y-4">
+      <div className="flex-1 bg-gray-900 rounded-lg p-6 mb-4 overflow-y-auto space-y-6">
         {messages.map((m, i) => (
-          <div key={i} className={`p-3 rounded-lg ${m.role === 'user' ? 'bg-brand-accent ml-auto max-w-[80%]' : 'bg-gray-800 mr-auto max-w-[80%]'}`}>
-            {m.content}
+          <div key={i} className={`p-4 rounded-xl shadow-md ${m.role === 'user' ? 'bg-brand-accent ml-auto max-w-[80%] text-white text-lg' : 'bg-gray-800 mr-auto max-w-[90%] border border-gray-700'}`}>
+            {m.role === 'ai' ? (
+              <div className="markdown-body text-gray-300">
+                <ReactMarkdown>{m.content}</ReactMarkdown>
+              </div>
+            ) : (
+              m.content
+            )}
           </div>
         ))}
         {loading && <div className="text-gray-400 animate-pulse">Matrica is thinking...</div>}

@@ -11,7 +11,10 @@ def get_rag_retriever():
 
     embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     vectorstore = Chroma(persist_directory=chroma_dir, embedding_function=embeddings, collection_name="valorant_news")
-    return vectorstore.as_retriever(search_kwargs={"k": 3})
+    return vectorstore.as_retriever(
+        search_type="mmr",
+        search_kwargs={"k": 10, "fetch_k": 30}
+    )
 
 def retrieve_context(query: str) -> str:
     retriever = get_rag_retriever()

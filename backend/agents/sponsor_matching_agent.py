@@ -24,13 +24,19 @@ def get_ranked_players(budget, pop_w, rep_w, skill_w):
     try:
         with engine.connect() as conn:
             # Join dim_players with fact_player_stats to get overall rating (skill)
+            # Since VCT real data doesn't have popularity, reputation, or budget, we dynamically
+            # simulate them consistently based on the player's name hash!
             query = text("""
-                SELECT p."Player_Name", p.popularity_score, p.reputation_score, p.estimated_budget,
-                       AVG(f."Rating") as avg_rating
+                SELECT 
+                    p.player as "Player_Name", 
+                    (ABS(hashtext(p.player)) % 50) + 50 as popularity_score, 
+                    (ABS(hashtext(p.player)) % 40) + 60 as reputation_score, 
+                    (ABS(hashtext(p.player)) % 40000) + 10000 as estimated_budget,
+                    AVG(f.rating) as avg_rating
                 FROM dim_players p
-                LEFT JOIN fact_player_stats f ON p."Player_ID" = f."Player_ID"
-                WHERE COALESCE(p.estimated_budget, 10000) <= :budget
-                GROUP BY p."Player_Name", p.popularity_score, p.reputation_score, p.estimated_budget
+                LEFT JOIN fact_player_stats f ON p.player_id = f.player_id
+                WHERE (ABS(hashtext(p.player)) % 40000) + 10000 <= :budget
+                GROUP BY p.player
             """)
             
             result = conn.execute(query, {"budget": budget})

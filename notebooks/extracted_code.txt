@@ -1,0 +1,2807 @@
+\n--- CODE FROM matches_silver.ipynb ---\n# ==============================================================================
+# Project      : Valorant Champions Tour (VCT) 2025
+# Notebook     : Bronze_to_Silver_Matches
+# Layer        : Bronze -> Silver
+# Author       : Rohit Chavan
+#
+# Description:
+# This notebook reads raw parquet datasets from the Bronze layer,
+# performs data cleaning and validation, and writes the cleaned
+# datasets into the Silver layer.
+# ==============================================================================
+
+# ==============================================================================
+# Imports
+# ==============================================================================
+
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
+from pyspark.sql.types import *
+import re
+
+# ==============================================================================
+# Base Paths
+# ==============================================================================
+
+BRONZE_PATH = "/Volumes/workspace/default/matrica/bronze/vct_2025/matches"
+SILVER_PATH = "/Volumes/workspace/default/matrica/silver/vct_2025/matches"
+
+print("Project Paths Loaded Successfully")
+
+# ==============================================================================
+# Standardize Column Names
+#
+# Match Type
+# 
+# Match_Type
+# ==============================================================================
+
+def standardize_columns(df):
+
+    for column in df.columns:
+
+        new_column = (
+            column.strip()
+                  .replace(" ", "_")
+                  .replace("-", "_")
+                  .replace("%", "Percentage")
+                  .replace("(", "")
+                  .replace(")", "")
+                  .replace(",", "")
+        )
+
+        # Remove multiple underscores
+        new_column = re.sub("_+", "_", new_column)
+
+        # Lower Case
+        new_column = (
+            column.lower()
+                .replace(" ","_")
+                .replace("-","_")
+        )        
+        df = df.withColumnRenamed(column, new_column)
+
+    return df
+
+
+# ==============================================================================
+# Trim String Columns
+# ==============================================================================
+
+def trim_string_columns(df):
+
+    string_columns = [
+
+        field.name
+
+        for field in df.schema.fields
+
+        if isinstance(field.dataType, StringType)
+
+    ]
+
+    for column in string_columns:
+
+        df = df.withColumn(column, F.trim(F.col(column)))
+
+    return df
+
+
+# ==============================================================================
+# Convert Blank Strings to NULL
+# ==============================================================================
+
+def blank_to_null(df):
+
+    string_columns = [
+
+        field.name
+
+        for field in df.schema.fields
+
+        if isinstance(field.dataType, StringType)
+
+    ]
+
+    for column in string_columns:
+
+        df = df.withColumn(
+
+            column,
+
+            F.when(
+
+                F.trim(F.col(column)) == "",
+
+                None
+
+            ).otherwise(F.col(column))
+
+        )
+
+    return df
+
+
+# ==============================================================================
+# Standardize Text
+#
+# group stage
+# GROUP STAGE
+#
+# 
+#
+# Group Stage
+# ==============================================================================
+
+def standardize_text(df):
+
+    string_columns = [
+
+        field.name
+
+        for field in df.schema.fields
+
+        if isinstance(field.dataType, StringType)
+
+    ]
+
+    for column in string_columns:
+
+        df = df.withColumn(
+
+            column,
+
+            F.initcap(F.col(column))
+
+        )
+
+    return df
+
+
+# ==============================================================================
+# Remove Duplicate Rows
+# ==============================================================================
+
+def remove_duplicates(df):
+
+    before = df.count()
+
+    df = df.dropDuplicates()
+
+    after = df.count()
+
+    print(f"Duplicate Rows Removed : {before-after}")
+
+    return df
+
+
+# ==============================================================================
+# Replace NULL in Numeric Columns
+# ==============================================================================
+
+def fill_numeric_nulls(df):
+
+    numeric_columns = [
+
+        field.name
+
+        for field in df.schema.fields
+
+        if isinstance(
+
+            field.dataType,
+
+            (
+
+                IntegerType,
+
+                LongType,
+
+                DoubleType,
+
+                FloatType,
+
+                ShortType,
+
+                DecimalType
+
+            )
+
+        )
+
+    ]
+
+    if numeric_columns:
+
+        df = df.fillna(0, subset=numeric_columns)
+
+    return df
+
+
+# ==============================================================================
+# Remove Completely Empty Rows
+# ==============================================================================
+
+def remove_empty_rows(df):
+
+    return df.na.drop(how="all")
+
+
+# ==============================================================================
+# Remove Comma from Numeric Strings
+#
+# 2,900
+#
+# 
+#
+# 2900
+# ==============================================================================
+
+def remove_commas(df, columns):
+
+    for column in columns:
+
+        df = df.withColumn(
+
+            column,
+
+            F.regexp_replace(F.col(column), ",", "")
+
+        )
+
+    return df
+
+
+# ==============================================================================
+# Remove Percentage Symbol
+#
+# 87%
+#
+# 
+#
+# 87
+# ==============================================================================
+
+def remove_percentage(df, columns):
+
+    for column in columns:
+
+        df = df.withColumn(
+
+            column,
+
+            F.regexp_replace(F.col(column), "%", "")
+
+        )
+
+    return df
+
+
+# ==============================================================================
+# Data Quality Report
+# ==============================================================================
+
+def quality_report(df):
+
+    print("="*70)
+
+    print(f"Rows    : {df.count()}")
+
+    print(f"Columns : {len(df.columns)}")
+
+    print("="*70)
+
+    display(
+
+        df.select(
+
+            [
+
+                F.count(
+
+                    F.when(
+
+                        F.col(column).isNull(),
+
+                        column
+
+                    )
+
+                ).alias(column)
+
+                for column in df.columns
+
+            ]
+
+        )
+
+    )
+
+
+# ==============================================================================
+# Write Silver Dataset
+# ==============================================================================
+
+def write_silver(df, dataset_name):
+
+    output_path = f"{SILVER_PATH}/{dataset_name}"
+
+    df.write.mode("overwrite").parquet(output_path)
+
+    print(f"Silver Dataset Written Successfully")
+
+    print(output_path)
+
+    # ==============================================================================
+# Convert Short Numeric Values
+#
+# Examples
+# 3.3k -> 3300
+# 2k   -> 2000
+# 1.2m -> 1200000
+# ==============================================================================
+
+def convert_k_values(df, column):
+
+    return (
+        df
+        .withColumn(column, F.lower(F.trim(F.col(column))))
+        .withColumn(column, F.regexp_replace(F.col(column), ",", ""))
+        .withColumn(
+            column,
+            F.when(
+                F.col(column).rlike(r'^[0-9]*\.?[0-9]+k$'),
+                (
+                    F.regexp_replace(F.col(column), "k", "").cast("double")
+                    * 1000
+                ).cast("int")
+            )
+            .when(
+                F.col(column).rlike(r'^[0-9]*\.?[0-9]+m$'),
+                (
+                    F.regexp_replace(F.col(column), "m", "").cast("double")
+                    * 1000000
+                ).cast("int")
+            )
+            .otherwise(F.col(column).cast("int"))
+        )
+    )
+
+
+# ==============================================================================
+# Validate Silver Dataset
+# ==============================================================================
+
+def validate_silver(dataset_name):
+
+    df = spark.read.parquet(f"{SILVER_PATH}/{dataset_name}")
+
+    print("="*70)
+
+    print("Validation Successful")
+
+    print(f"Rows : {df.count()}")
+
+    print(f"Columns : {len(df.columns)}")
+
+    display(df.limit(10))
+
+
+print("="*70)
+print("Common Helper Functions Loaded Successfully")
+print("Ready For Bronze  Silver Transformation")
+print("="*70)\n########################################\n# ==============================================================================
+# Dataset : draft_phase
+# Layer   : Bronze -> Silver
+# Purpose : Clean Draft Phase Dataset
+# ==============================================================================
+
+print("="*80)
+print("Processing Dataset : draft_phase")
+print("="*80)
+
+# ------------------------------------------------------------------------------
+# Step 1 : Read Bronze Dataset
+# ------------------------------------------------------------------------------
+
+dataset_name = "draft_phase"
+
+df = spark.read.parquet(f"{BRONZE_PATH}/{dataset_name}")
+
+rows_before = df.count()
+
+print(f"Rows Read : {rows_before}")
+
+display(df.limit(10))
+
+
+# ------------------------------------------------------------------------------
+# Step 2 : Data Quality Report (Before Cleaning)
+# ------------------------------------------------------------------------------
+
+print("\nData Quality Report (Before Cleaning)")
+
+quality_report(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 3 : Standardize Column Names
+#
+# Match Type
+# 
+# Match_Type
+# ------------------------------------------------------------------------------
+
+df = standardize_columns(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 4 : Trim Leading & Trailing Spaces
+# ------------------------------------------------------------------------------
+
+df = trim_string_columns(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 5 : Replace Blank Strings with NULL
+# ------------------------------------------------------------------------------
+
+df = blank_to_null(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 6 : Standardize Text Values
+#
+# Example:
+# group stage  Group Stage
+# sentinel  Sentinel
+# ------------------------------------------------------------------------------
+
+df = standardize_text(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 7 : Remove Duplicate Rows
+# ------------------------------------------------------------------------------
+
+before_duplicates = df.count()
+
+df = remove_duplicates(df)
+
+after_duplicates = df.count()
+
+duplicates_removed = before_duplicates - after_duplicates
+
+
+# ------------------------------------------------------------------------------
+# Step 8 : Remove Completely Empty Rows
+# ------------------------------------------------------------------------------
+
+df = remove_empty_rows(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 9 : Data Quality Report (After Cleaning)
+# ------------------------------------------------------------------------------
+
+print("\nData Quality Report (After Cleaning)")
+
+quality_report(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 10 : Write Clean Data to Silver Layer
+# ------------------------------------------------------------------------------
+
+write_silver(df, dataset_name)
+
+
+# ------------------------------------------------------------------------------
+# Step 11 : Validate Silver Dataset
+# ------------------------------------------------------------------------------
+
+validate_silver(dataset_name)
+
+# another helper function
+def log_summary(dataset_name, rows_before, rows_after, duplicates_removed, extra_message=""):
+
+    print("\n" + "=" * 80)
+    print("ETL EXECUTION SUMMARY")
+    print("=" * 80)
+    print(f"Dataset              : {dataset_name}")
+    print(f"Rows Read            : {rows_before}")
+    print(f"Rows Written         : {rows_after}")
+    print(f"Duplicates Removed   : {duplicates_removed}")
+
+    if extra_message:
+        print(extra_message)
+
+    print(f"Silver Location      : {SILVER_PATH}/{dataset_name}")
+    print("Status               : SUCCESS")
+    print("=" * 80)
+
+
+# ------------------------------------------------------------------------------
+# Step 12 : ETL Summary
+# ------------------------------------------------------------------------------
+
+print("\n" + "="*80)
+print("ETL EXECUTION SUMMARY")
+print("="*80)
+
+print(f"Dataset               : {dataset_name}")
+print(f"Rows Read             : {rows_before}")
+print(f"Rows Written          : {df.count()}")
+print(f"Duplicates Removed    : {duplicates_removed}")
+print(f"Columns               : {len(df.columns)}")
+print(f"Silver Location       : {SILVER_PATH}/{dataset_name}")
+print("Status                : SUCCESS")
+
+print("="*80)\n########################################\n# ==============================================================================
+# Dataset : eco_rounds
+# Layer   : Bronze -> Silver
+# Purpose : Clean & Transform Economy Rounds Dataset
+# ==============================================================================
+
+print("=" * 80)
+print("Processing Dataset : eco_rounds")
+print("=" * 80)
+
+# ------------------------------------------------------------------------------
+# Step 1 : Read Bronze Dataset
+# ------------------------------------------------------------------------------
+
+dataset_name = "eco_rounds"
+
+df = spark.read.parquet(f"{BRONZE_PATH}/{dataset_name}")
+
+rows_before = df.count()
+
+print(f"Rows Read : {rows_before}")
+
+display(df.limit(10))
+
+
+# ------------------------------------------------------------------------------
+# Step 2 : Data Quality Report (Before Cleaning)
+# ------------------------------------------------------------------------------
+
+print("\nData Quality Report (Before Cleaning)")
+
+quality_report(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 3 : Standardize Column Names
+# ------------------------------------------------------------------------------
+
+df = standardize_columns(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 4 : Trim String Columns
+# ------------------------------------------------------------------------------
+
+df = trim_string_columns(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 5 : Replace Blank Strings with NULL
+# ------------------------------------------------------------------------------
+
+df = blank_to_null(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 6 : Standardize Text Columns
+# ------------------------------------------------------------------------------
+
+df = standardize_text(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 7 : Remove Duplicate Rows
+# ------------------------------------------------------------------------------
+
+before_duplicates = df.count()
+
+df = remove_duplicates(df)
+
+after_duplicates = df.count()
+
+duplicates_removed = before_duplicates - after_duplicates
+
+
+# ------------------------------------------------------------------------------
+# Step 8 : Clean Loadout_Value
+#
+# Example:
+# 2,900  -> 2900
+# ------------------------------------------------------------------------------
+
+df = convert_k_values(df, "Loadout_Value")
+
+# ------------------------------------------------------------------------------
+# Step 9 : Clean Remaining_Credits
+#
+# Example:
+# 1,250 -> 1250
+# ------------------------------------------------------------------------------
+df = convert_k_values(df, "Remaining_Credits")
+
+
+# ------------------------------------------------------------------------------
+# Step 10 : Replace Numeric NULL Values
+# ------------------------------------------------------------------------------
+
+df = fill_numeric_nulls(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 11 : Validate Round_Number
+#
+# Keep only valid rounds (> 0)
+# ------------------------------------------------------------------------------
+
+df = df.filter(F.col("Round_Number") > 0)
+
+
+# ------------------------------------------------------------------------------
+# Step 12 : Remove Completely Empty Rows
+# ------------------------------------------------------------------------------
+
+df = remove_empty_rows(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 13 : Data Quality Report (After Cleaning)
+# ------------------------------------------------------------------------------
+
+print("\nData Quality Report (After Cleaning)")
+
+quality_report(df)
+
+display(df.limit(10))
+
+
+# ------------------------------------------------------------------------------
+# Step 14 : Write to Silver Layer
+# ------------------------------------------------------------------------------
+
+write_silver(df, dataset_name)
+
+
+# ------------------------------------------------------------------------------
+# Step 15 : Validate Silver Dataset
+# ------------------------------------------------------------------------------
+
+validate_silver(dataset_name)
+
+
+# ------------------------------------------------------------------------------
+# Step 16 : ETL Summary
+# ------------------------------------------------------------------------------
+
+print("\n" + "=" * 80)
+print("ETL EXECUTION SUMMARY")
+print("=" * 80)
+
+print(f"Dataset              : {dataset_name}")
+print(f"Rows Read            : {rows_before}")
+print(f"Rows Written         : {df.count()}")
+print(f"Duplicates Removed   : {duplicates_removed}")
+print(f"Columns              : {len(df.columns)}")
+print(f"Silver Location      : {SILVER_PATH}/{dataset_name}")
+print("Status               : SUCCESS")
+
+print("=" * 80)\n########################################\n# ==============================================================================
+# Dataset : eco_stats
+# Layer   : Bronze -> Silver
+# Purpose : Clean & Validate Economy Statistics Dataset
+# ==============================================================================
+
+from pyspark.sql import functions as F
+
+print("=" * 80)
+print("Processing Dataset : eco_stats")
+print("=" * 80)
+
+# ------------------------------------------------------------------------------
+# Step 1 : Read Bronze Dataset
+# ------------------------------------------------------------------------------
+
+dataset_name = "eco_stats"
+
+df = spark.read.parquet(f"{BRONZE_PATH}/{dataset_name}")
+
+rows_before = df.count()
+
+print(f"Rows Read : {rows_before}")
+
+display(df.limit(10))
+
+
+# ------------------------------------------------------------------------------
+# Step 2 : Data Quality Report (Before Cleaning)
+# ------------------------------------------------------------------------------
+
+print("\nData Quality Report (Before Cleaning)")
+
+quality_report(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 3 : Standardize Column Names
+# ------------------------------------------------------------------------------
+
+df = standardize_columns(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 4 : Trim String Columns
+# ------------------------------------------------------------------------------
+
+df = trim_string_columns(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 5 : Replace Blank Strings with NULL
+# ------------------------------------------------------------------------------
+
+df = blank_to_null(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 6 : Standardize Text Columns
+# ------------------------------------------------------------------------------
+
+df = standardize_text(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 7 : Remove Duplicate Rows
+# ------------------------------------------------------------------------------
+
+before_duplicates = df.count()
+
+df = remove_duplicates(df)
+
+after_duplicates = df.count()
+
+duplicates_removed = before_duplicates - after_duplicates
+
+
+# ------------------------------------------------------------------------------
+# Step 8 : Fill Numeric NULL Values
+# ------------------------------------------------------------------------------
+
+df = fill_numeric_nulls(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 9 : Business Rule Validation
+#
+# Won should never be greater than Initiated
+# ------------------------------------------------------------------------------
+
+invalid_records = df.filter(F.col("Won") > F.col("Initiated")).count()
+
+print(f"Invalid Records (Won > Initiated) : {invalid_records}")
+
+# Keep only valid records
+df = df.filter(F.col("Won") <= F.col("Initiated"))
+
+
+# ------------------------------------------------------------------------------
+# Step 10 : Remove Completely Empty Rows
+# ------------------------------------------------------------------------------
+
+df = remove_empty_rows(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 11 : Data Quality Report (After Cleaning)
+# ------------------------------------------------------------------------------
+
+print("\nData Quality Report (After Cleaning)")
+
+quality_report(df)
+
+display(df.limit(10))
+
+
+# ------------------------------------------------------------------------------
+# Step 12 : Write to Silver Layer
+# ------------------------------------------------------------------------------
+
+write_silver(df, dataset_name)
+
+
+# ------------------------------------------------------------------------------
+# Step 13 : Validate Silver Dataset
+# ------------------------------------------------------------------------------
+
+validate_silver(dataset_name)
+
+
+# ------------------------------------------------------------------------------
+# Step 14 : ETL Summary
+# ------------------------------------------------------------------------------
+
+print("\n" + "=" * 80)
+print("ETL EXECUTION SUMMARY")
+print("=" * 80)
+
+print(f"Dataset              : {dataset_name}")
+print(f"Rows Read            : {rows_before}")
+print(f"Rows Written         : {df.count()}")
+print(f"Duplicates Removed   : {duplicates_removed}")
+print(f"Business Rule Errors : {invalid_records}")
+print(f"Columns              : {len(df.columns)}")
+print(f"Silver Location      : {SILVER_PATH}/{dataset_name}")
+print("Status               : SUCCESS")
+
+print("=" * 80)\n########################################\n# ==============================================================================
+# Dataset : kills
+# Layer   : Bronze -> Silver
+# Purpose : Clean & Validate Kills Dataset
+# ==============================================================================
+
+from pyspark.sql import functions as F
+
+print("=" * 80)
+print("Processing Dataset : kills")
+print("=" * 80)
+
+# ------------------------------------------------------------------------------
+# Step 1 : Read Bronze Dataset
+# ------------------------------------------------------------------------------
+
+dataset_name = "kills"
+
+df = spark.read.parquet(f"{BRONZE_PATH}/{dataset_name}")
+
+rows_before = df.count()
+
+print(f"Rows Read : {rows_before}")
+
+display(df.limit(10))
+
+
+# ------------------------------------------------------------------------------
+# Step 2 : Data Quality Report
+# ------------------------------------------------------------------------------
+
+print("\nData Quality Report (Before Cleaning)")
+
+quality_report(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 3 : Standardize Column Names
+# ------------------------------------------------------------------------------
+
+df = standardize_columns(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 4 : Trim String Columns
+# ------------------------------------------------------------------------------
+
+df = trim_string_columns(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 5 : Replace Blank Strings with NULL
+# ------------------------------------------------------------------------------
+
+df = blank_to_null(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 6 : Standardize Text Values
+# ------------------------------------------------------------------------------
+
+df = standardize_text(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 7 : Remove Duplicate Rows
+# ------------------------------------------------------------------------------
+
+before_duplicates = df.count()
+
+df = remove_duplicates(df)
+
+after_duplicates = df.count()
+
+duplicates_removed = before_duplicates - after_duplicates
+
+
+# ------------------------------------------------------------------------------
+# Step 8 : Fill Numeric NULL Values
+# ------------------------------------------------------------------------------
+
+df = fill_numeric_nulls(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 9 : Remove Invalid Kill Counts
+#
+# Kill values cannot be negative
+# ------------------------------------------------------------------------------
+
+invalid_kills = df.filter(
+    (F.col("Player_Kills") < 0) |
+    (F.col("Enemy_Kills") < 0)
+).count()
+
+print(f"Invalid Kill Records : {invalid_kills}")
+
+df = df.filter(
+    (F.col("Player_Kills") >= 0) &
+    (F.col("Enemy_Kills") >= 0)
+)
+
+
+# ------------------------------------------------------------------------------
+# Step 10 : Recalculate Difference
+#
+# Difference = Player_Kills - Enemy_Kills
+# ------------------------------------------------------------------------------
+
+df = df.withColumn(
+    "Difference",
+    F.col("Player_Kills") - F.col("Enemy_Kills")
+)
+
+
+# ------------------------------------------------------------------------------
+# Step 11 : Remove Empty Rows
+# ------------------------------------------------------------------------------
+
+df = remove_empty_rows(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 12 : Data Quality Report
+# ------------------------------------------------------------------------------
+
+print("\nData Quality Report (After Cleaning)")
+
+quality_report(df)
+
+display(df.limit(10))
+
+
+# ------------------------------------------------------------------------------
+# Step 13 : Write Silver Dataset
+# ------------------------------------------------------------------------------
+
+write_silver(df, dataset_name)
+
+
+# ------------------------------------------------------------------------------
+# Step 14 : Validate Silver Dataset
+# ------------------------------------------------------------------------------
+
+validate_silver(dataset_name)
+
+
+# ------------------------------------------------------------------------------
+# Step 15 : ETL Summary
+# ------------------------------------------------------------------------------
+
+print("\n" + "=" * 80)
+print("ETL EXECUTION SUMMARY")
+print("=" * 80)
+
+print(f"Dataset              : {dataset_name}")
+print(f"Rows Read            : {rows_before}")
+print(f"Rows Written         : {df.count()}")
+print(f"Duplicates Removed   : {duplicates_removed}")
+print(f"Invalid Kill Records : {invalid_kills}")
+print(f"Columns              : {len(df.columns)}")
+print(f"Silver Location      : {SILVER_PATH}/{dataset_name}")
+print("Status               : SUCCESS")
+
+print("=" * 80)\n########################################\n# ==============================================================================
+# Dataset : kills_stats
+# Layer   : Bronze -> Silver
+# Purpose : Clean & Validate Player Kill Statistics
+# ==============================================================================
+
+from pyspark.sql import functions as F
+
+print("=" * 80)
+print("Processing Dataset : kills_stats")
+print("=" * 80)
+
+# ------------------------------------------------------------------------------
+# Step 1 : Read Bronze Dataset
+# ------------------------------------------------------------------------------
+
+dataset_name = "kills_stats"
+
+df = spark.read.parquet(f"{BRONZE_PATH}/{dataset_name}")
+
+rows_before = df.count()
+
+print(f"Rows Read : {rows_before}")
+
+display(df.limit(10))
+
+
+# ------------------------------------------------------------------------------
+# Step 2 : Data Quality Report
+# ------------------------------------------------------------------------------
+
+print("\nData Quality Report (Before Cleaning)")
+
+quality_report(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 3 : Standardize Column Names
+# ------------------------------------------------------------------------------
+
+df = standardize_columns(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 4 : Trim String Columns
+# ------------------------------------------------------------------------------
+
+df = trim_string_columns(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 5 : Replace Blank Strings with NULL
+# ------------------------------------------------------------------------------
+
+df = blank_to_null(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 6 : Standardize Text
+# ------------------------------------------------------------------------------
+
+df = standardize_text(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 7 : Remove Duplicate Rows
+# ------------------------------------------------------------------------------
+
+before_duplicates = df.count()
+
+df = remove_duplicates(df)
+
+after_duplicates = df.count()
+
+duplicates_removed = before_duplicates - after_duplicates
+
+
+# ------------------------------------------------------------------------------
+# Step 8 : Fill Numeric NULL Values
+# ------------------------------------------------------------------------------
+
+df = fill_numeric_nulls(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 9 : Validate Numeric Columns
+#
+# These values should never be negative.
+# ------------------------------------------------------------------------------
+
+numeric_columns = [
+    "2k",
+    "3k",
+    "4k",
+    "5k",
+    "1v1",
+    "1v2",
+    "1v3",
+    "1v4",
+    "1v5",
+    "Econ",
+    "Spike_Plants",
+    "Spike_Defuses"
+]
+
+invalid_records = None
+
+for column in numeric_columns:
+
+    condition = F.col(f"`{column}`") < 0
+
+    if invalid_records is None:
+        invalid_records = condition
+    else:
+        invalid_records = invalid_records | condition
+
+
+invalid_count = df.filter(invalid_records).count()
+
+print(f"Invalid Numeric Records : {invalid_count}")
+
+df = df.filter(~invalid_records)
+
+
+# ------------------------------------------------------------------------------
+# Step 10 : Convert 1v5 to Integer
+#
+# (Only if all values are whole numbers)
+# ------------------------------------------------------------------------------
+
+df = df.withColumn("1v5", F.round(F.col("1v5"), 0).cast("int"))
+
+
+# ------------------------------------------------------------------------------
+# Step 11 : Remove Empty Rows
+# ------------------------------------------------------------------------------
+
+df = remove_empty_rows(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 12 : Data Quality Report
+# ------------------------------------------------------------------------------
+
+print("\nData Quality Report (After Cleaning)")
+
+quality_report(df)
+
+display(df.limit(10))
+
+
+# ------------------------------------------------------------------------------
+# Step 13 : Write Silver Dataset
+# ------------------------------------------------------------------------------
+
+write_silver(df, dataset_name)
+
+
+# ------------------------------------------------------------------------------
+# Step 14 : Validate Silver Dataset
+# ------------------------------------------------------------------------------
+
+validate_silver(dataset_name)
+
+
+# ------------------------------------------------------------------------------
+# Step 15 : ETL Summary
+# ------------------------------------------------------------------------------
+
+print("\n" + "=" * 80)
+print("ETL EXECUTION SUMMARY")
+print("=" * 80)
+
+print(f"Dataset              : {dataset_name}")
+print(f"Rows Read            : {rows_before}")
+print(f"Rows Written         : {df.count()}")
+print(f"Duplicates Removed   : {duplicates_removed}")
+print(f"Invalid Records      : {invalid_count}")
+print(f"Columns              : {len(df.columns)}")
+print(f"Silver Location      : {SILVER_PATH}/{dataset_name}")
+print("Status               : SUCCESS")
+
+print("=" * 80)\n########################################\n# ==============================================================================
+# Dataset : maps_played
+# Layer   : Bronze -> Silver
+# Purpose : Clean & Standardize Maps Played Dataset
+# ==============================================================================
+
+from pyspark.sql import functions as F
+
+print("=" * 80)
+print("Processing Dataset : maps_played")
+print("=" * 80)
+
+# ------------------------------------------------------------------------------
+# Step 1 : Read Bronze Dataset
+# ------------------------------------------------------------------------------
+
+dataset_name = "maps_played"
+
+df = spark.read.parquet(f"{BRONZE_PATH}/{dataset_name}")
+
+rows_before = df.count()
+
+print(f"Rows Read : {rows_before}")
+
+display(df.limit(10))
+
+
+# ------------------------------------------------------------------------------
+# Step 2 : Data Quality Report
+# ------------------------------------------------------------------------------
+
+print("\nData Quality Report (Before Cleaning)")
+
+quality_report(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 3 : Standardize Column Names
+# ------------------------------------------------------------------------------
+
+df = standardize_columns(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 4 : Trim String Columns
+# ------------------------------------------------------------------------------
+
+df = trim_string_columns(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 5 : Replace Blank Strings with NULL
+# ------------------------------------------------------------------------------
+
+df = blank_to_null(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 6 : Standardize Text Values
+# ------------------------------------------------------------------------------
+
+df = standardize_text(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 7 : Remove Duplicate Rows
+# ------------------------------------------------------------------------------
+
+before_duplicates = df.count()
+
+df = remove_duplicates(df)
+
+after_duplicates = df.count()
+
+duplicates_removed = before_duplicates - after_duplicates
+
+
+# ------------------------------------------------------------------------------
+# Step 8 : Remove Records with Missing Map
+# ------------------------------------------------------------------------------
+
+missing_maps = df.filter(F.col("Map").isNull()).count()
+
+print(f"Rows Removed (Missing Map): {missing_maps}")
+
+df = df.filter(F.col("Map").isNotNull())
+
+
+# ------------------------------------------------------------------------------
+# Step 9 : Remove Completely Empty Rows
+# ------------------------------------------------------------------------------
+
+df = remove_empty_rows(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 10 : Data Quality Report
+# ------------------------------------------------------------------------------
+
+print("\nData Quality Report (After Cleaning)")
+
+quality_report(df)
+
+display(df.limit(10))
+
+
+# ------------------------------------------------------------------------------
+# Step 11 : Write Silver Dataset
+# ------------------------------------------------------------------------------
+
+write_silver(df, dataset_name)
+
+
+# ------------------------------------------------------------------------------
+# Step 12 : Validate Silver Dataset
+# ------------------------------------------------------------------------------
+
+validate_silver(dataset_name)
+
+
+# ------------------------------------------------------------------------------
+# Step 13 : ETL Summary
+# ------------------------------------------------------------------------------
+
+print("\n" + "=" * 80)
+print("ETL EXECUTION SUMMARY")
+print("=" * 80)
+
+print(f"Dataset              : {dataset_name}")
+print(f"Rows Read            : {rows_before}")
+print(f"Rows Written         : {df.count()}")
+print(f"Duplicates Removed   : {duplicates_removed}")
+print(f"Missing Maps Removed : {missing_maps}")
+print(f"Columns              : {len(df.columns)}")
+print(f"Silver Location      : {SILVER_PATH}/{dataset_name}")
+print("Status               : SUCCESS")
+
+print("=" * 80)\n########################################\n# ==============================================================================
+# Dataset : maps_scores
+# Layer   : Bronze -> Silver
+# Purpose : Clean, Validate & Transform Map Scores Dataset
+# ==============================================================================
+
+from pyspark.sql import functions as F
+
+print("=" * 80)
+print("Processing Dataset : maps_scores")
+print("=" * 80)
+
+# ------------------------------------------------------------------------------
+# Step 1 : Read Bronze Dataset
+# ------------------------------------------------------------------------------
+
+dataset_name = "maps_scores"
+
+df = spark.read.parquet(f"{BRONZE_PATH}/{dataset_name}")
+
+rows_before = df.count()
+
+print(f"Rows Read : {rows_before}")
+
+display(df.limit(10))
+
+
+# ------------------------------------------------------------------------------
+# Step 2 : Data Quality Report
+# ------------------------------------------------------------------------------
+
+print("\nData Quality Report (Before Cleaning)")
+
+quality_report(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 3 : Standardize Column Names
+# ------------------------------------------------------------------------------
+
+df = standardize_columns(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 4 : Trim String Columns
+# ------------------------------------------------------------------------------
+
+df = trim_string_columns(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 5 : Replace Blank Strings with NULL
+# ------------------------------------------------------------------------------
+
+df = blank_to_null(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 6 : Standardize Text
+# ------------------------------------------------------------------------------
+
+df = standardize_text(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 7 : Remove Duplicate Rows
+# ------------------------------------------------------------------------------
+
+before_duplicates = df.count()
+
+df = remove_duplicates(df)
+
+duplicates_removed = before_duplicates - df.count()
+
+
+# ------------------------------------------------------------------------------
+# Step 8 : Fill Numeric NULL Values
+# ------------------------------------------------------------------------------
+
+df = fill_numeric_nulls(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 9 : Convert Duration to Seconds
+#
+# Example:
+# 32:15 -> 1935 Seconds
+# ------------------------------------------------------------------------------
+
+df = df.withColumn(
+    "Duration_Seconds",
+    (
+        F.split(F.col("Duration"), ":").getItem(0).cast("int") * 60
+    ) +
+    (
+        F.split(F.col("Duration"), ":").getItem(1).cast("int")
+    )
+)
+
+
+# ------------------------------------------------------------------------------
+# Step 10 : Validate Team A Score
+# ------------------------------------------------------------------------------
+
+team_a_invalid = df.filter(
+
+    F.col("Team_A_Score") !=
+    (
+        F.col("Team_A_Attacker_Score") +
+        F.col("Team_A_Defender_Score") +
+        F.col("Team_A_Overtime_Score")
+    )
+
+).count()
+
+print(f"Invalid Team A Scores : {team_a_invalid}")
+
+
+# ------------------------------------------------------------------------------
+# Step 11 : Validate Team B Score
+# ------------------------------------------------------------------------------
+
+team_b_invalid = df.filter(
+
+    F.col("Team_B_Score") !=
+    (
+        F.col("Team_B_Attacker_Score") +
+        F.col("Team_B_Defender_Score") +
+        F.col("Team_B_Overtime_Score")
+    )
+
+).count()
+
+print(f"Invalid Team B Scores : {team_b_invalid}")
+
+
+# ------------------------------------------------------------------------------
+# Step 12 : Remove Invalid Score Records
+# ------------------------------------------------------------------------------
+
+df = df.filter(
+
+    (F.col("Team_A_Score") ==
+        F.col("Team_A_Attacker_Score") +
+        F.col("Team_A_Defender_Score") +
+        F.col("Team_A_Overtime_Score"))
+
+    &
+
+    (F.col("Team_B_Score") ==
+        F.col("Team_B_Attacker_Score") +
+        F.col("Team_B_Defender_Score") +
+        F.col("Team_B_Overtime_Score"))
+
+)
+
+
+# ------------------------------------------------------------------------------
+# Step 13 : Remove Empty Rows
+# ------------------------------------------------------------------------------
+
+df = remove_empty_rows(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 14 : Data Quality Report
+# ------------------------------------------------------------------------------
+
+print("\nData Quality Report (After Cleaning)")
+
+quality_report(df)
+
+display(df.limit(10))
+
+
+# ------------------------------------------------------------------------------
+# Step 15 : Write Silver Dataset
+# ------------------------------------------------------------------------------
+
+write_silver(df, dataset_name)
+
+
+# ------------------------------------------------------------------------------
+# Step 16 : Validate Silver Dataset
+# ------------------------------------------------------------------------------
+
+validate_silver(dataset_name)
+
+
+# ------------------------------------------------------------------------------
+# Step 17 : ETL Summary
+# ------------------------------------------------------------------------------
+
+print("\n" + "=" * 80)
+print("ETL EXECUTION SUMMARY")
+print("=" * 80)
+
+print(f"Dataset              : {dataset_name}")
+print(f"Rows Read            : {rows_before}")
+print(f"Rows Written         : {df.count()}")
+print(f"Duplicates Removed   : {duplicates_removed}")
+print(f"Invalid Team A Rows  : {team_a_invalid}")
+print(f"Invalid Team B Rows  : {team_b_invalid}")
+print(f"Columns              : {len(df.columns)}")
+print(f"Silver Location      : {SILVER_PATH}/{dataset_name}")
+print("Status               : SUCCESS")
+
+print("=" * 80)
+
+\n########################################\n# ==============================================================================
+# Dataset : overview
+# Layer   : Bronze -> Silver
+# Purpose : Clean & Transform Player Overview Statistics
+# ==============================================================================
+
+from pyspark.sql import functions as F
+
+print("=" * 80)
+print("Processing Dataset : overview")
+print("=" * 80)
+
+# ------------------------------------------------------------------------------
+# Step 1 : Read Bronze Dataset
+# ------------------------------------------------------------------------------
+
+dataset_name = "overview"
+
+df = spark.read.parquet(f"{BRONZE_PATH}/{dataset_name}")
+
+rows_before = df.count()
+
+print(f"Rows Read : {rows_before}")
+
+display(df.limit(10))
+
+
+# ------------------------------------------------------------------------------
+# Step 2 : Data Quality Report
+# ------------------------------------------------------------------------------
+
+print("\nData Quality Report (Before Cleaning)")
+
+quality_report(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 3 : Standardize Column Names
+# ------------------------------------------------------------------------------
+
+df = standardize_columns(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 4 : Trim String Columns
+# ------------------------------------------------------------------------------
+
+df = trim_string_columns(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 5 : Replace Blank Strings with NULL
+# ------------------------------------------------------------------------------
+
+df = blank_to_null(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 6 : Standardize Text
+# ------------------------------------------------------------------------------
+
+df = standardize_text(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 7 : Remove Duplicate Rows
+# ------------------------------------------------------------------------------
+
+before_duplicates = df.count()
+
+df = remove_duplicates(df)
+
+duplicates_removed = before_duplicates - df.count()
+
+
+# ------------------------------------------------------------------------------
+# Step 8 : Fill Numeric NULL Values
+# ------------------------------------------------------------------------------
+
+df = fill_numeric_nulls(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 9 : Convert Percentage Columns
+# ------------------------------------------------------------------------------
+
+df = df.withColumn(
+    "headshot_%",
+    F.regexp_replace(F.col("headshot_%"), "%", "").cast("double")
+)
+
+df = df.withColumn(
+    "kill,_assist,_trade,_survive_%",
+    F.regexp_replace(
+        F.col("kill,_assist,_trade,_survive_%"),
+        "%",
+        ""
+    ).cast("double")
+)
+
+
+# ------------------------------------------------------------------------------
+# Step 10 : Recalculate KD Difference
+# ------------------------------------------------------------------------------
+
+df = df.withColumn(
+    "kills_deaths_kd",
+    F.col("kills") - F.col("deaths")
+)
+
+
+# ------------------------------------------------------------------------------
+# Step 11 : Recalculate FK Difference
+# ------------------------------------------------------------------------------
+
+df = df.withColumn(
+    "first_kills_deaths_fkd",
+    F.col("first_kills") - F.col("first_deaths")
+)
+
+
+# ------------------------------------------------------------------------------
+# Step 12 : Rating Validation
+# ------------------------------------------------------------------------------
+
+invalid_rating = df.filter(F.col("rating") < 0).count()
+
+print(f"Invalid Ratings : {invalid_rating}")
+
+df = df.filter(F.col("rating") >= 0)
+
+
+# ------------------------------------------------------------------------------
+# Step 13 : Remove Empty Rows
+# ------------------------------------------------------------------------------
+
+df = remove_empty_rows(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 14 : Data Quality Report
+# ------------------------------------------------------------------------------
+
+print("\nData Quality Report (After Cleaning)")
+
+quality_report(df)
+
+display(df.limit(10))
+
+
+# ------------------------------------------------------------------------------
+# Step 15 : Write Silver Dataset
+# ------------------------------------------------------------------------------
+
+write_silver(df, dataset_name)
+
+
+# ------------------------------------------------------------------------------
+# Step 16 : Validate Silver Dataset
+# ------------------------------------------------------------------------------
+
+validate_silver(dataset_name)
+
+
+# ------------------------------------------------------------------------------
+# Step 17 : ETL Summary
+# ------------------------------------------------------------------------------
+
+print("\n" + "=" * 80)
+print("ETL EXECUTION SUMMARY")
+print("=" * 80)
+
+print(f"Dataset                : {dataset_name}")
+print(f"Rows Read              : {rows_before}")
+print(f"Rows Written           : {df.count()}")
+print(f"Duplicates Removed     : {duplicates_removed}")
+print(f"Invalid Ratings        : {invalid_rating}")
+print(f"Columns                : {len(df.columns)}")
+print(f"Silver Location        : {SILVER_PATH}/{dataset_name}")
+print("Status                 : SUCCESS")
+
+print("=" * 80)\n########################################\n# ==============================================================================
+# Dataset : rounds_kills
+# Layer   : Bronze -> Silver
+# Purpose : Clean & Validate Round Kill Events
+# ==============================================================================
+
+from pyspark.sql import functions as F
+
+print("=" * 80)
+print("Processing Dataset : rounds_kills")
+print("=" * 80)
+
+# ------------------------------------------------------------------------------
+# Step 1 : Read Bronze Dataset
+# ------------------------------------------------------------------------------
+
+dataset_name = "rounds_kills"
+
+df = spark.read.parquet(f"{BRONZE_PATH}/{dataset_name}")
+
+rows_before = df.count()
+
+print(f"Rows Read : {rows_before}")
+
+display(df.limit(10))
+
+
+# ------------------------------------------------------------------------------
+# Step 2 : Data Quality Report
+# ------------------------------------------------------------------------------
+
+print("\nData Quality Report (Before Cleaning)")
+
+quality_report(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 3 : Standardize Column Names
+# ------------------------------------------------------------------------------
+
+df = standardize_columns(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 4 : Trim String Columns
+# ------------------------------------------------------------------------------
+
+df = trim_string_columns(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 5 : Replace Blank Strings with NULL
+# ------------------------------------------------------------------------------
+
+df = blank_to_null(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 6 : Standardize Text
+# ------------------------------------------------------------------------------
+
+df = standardize_text(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 7 : Remove Duplicate Rows
+# ------------------------------------------------------------------------------
+
+before_duplicates = df.count()
+
+df = remove_duplicates(df)
+
+duplicates_removed = before_duplicates - df.count()
+
+
+# ------------------------------------------------------------------------------
+# Step 8 : Fill Numeric NULL Values
+# ------------------------------------------------------------------------------
+
+df = fill_numeric_nulls(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 9 : Validate Round Number
+#
+# Valorant rounds normally range from 1 to 30
+# ------------------------------------------------------------------------------
+
+invalid_rounds = df.filter(
+    (F.col("Round_Number") < 1) |
+    (F.col("Round_Number") > 30)
+).count()
+
+print(f"Invalid Round Records : {invalid_rounds}")
+
+df = df.filter(
+    (F.col("Round_Number") >= 1) &
+    (F.col("Round_Number") <= 30)
+)
+
+
+# ------------------------------------------------------------------------------
+# Step 10 : Remove Records with Missing Players
+# ------------------------------------------------------------------------------
+
+missing_players = df.filter(
+    F.col("Eliminator").isNull() |
+    F.col("Eliminated").isNull()
+).count()
+
+print(f"Rows Removed (Missing Players) : {missing_players}")
+
+df = df.filter(
+    F.col("Eliminator").isNotNull() &
+    F.col("Eliminated").isNotNull()
+)
+
+
+# ------------------------------------------------------------------------------
+# Step 11 : Remove Completely Empty Rows
+# ------------------------------------------------------------------------------
+
+df = remove_empty_rows(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 12 : Data Quality Report
+# ------------------------------------------------------------------------------
+
+print("\nData Quality Report (After Cleaning)")
+
+quality_report(df)
+
+display(df.limit(10))
+
+
+# ------------------------------------------------------------------------------
+# Step 13 : Write Silver Dataset
+# ------------------------------------------------------------------------------
+
+write_silver(df, dataset_name)
+
+
+# ------------------------------------------------------------------------------
+# Step 14 : Validate Silver Dataset
+# ------------------------------------------------------------------------------
+
+validate_silver(dataset_name)
+
+
+# ------------------------------------------------------------------------------
+# Step 15 : ETL Summary
+# ------------------------------------------------------------------------------
+
+print("\n" + "=" * 80)
+print("ETL EXECUTION SUMMARY")
+print("=" * 80)
+
+print(f"Dataset                 : {dataset_name}")
+print(f"Rows Read               : {rows_before}")
+print(f"Rows Written            : {df.count()}")
+print(f"Duplicates Removed      : {duplicates_removed}")
+print(f"Invalid Round Records   : {invalid_rounds}")
+print(f"Missing Player Records  : {missing_players}")
+print(f"Columns                 : {len(df.columns)}")
+print(f"Silver Location         : {SILVER_PATH}/{dataset_name}")
+print("Status                  : SUCCESS")
+
+print("=" * 80)\n########################################\n# ==============================================================================
+# Dataset : scores
+# Layer   : Bronze -> Silver
+# Purpose : Clean & Validate Match Scores
+# ==============================================================================
+
+from pyspark.sql import functions as F
+
+print("=" * 80)
+print("Processing Dataset : scores")
+print("=" * 80)
+
+# ------------------------------------------------------------------------------
+# Step 1 : Read Bronze Dataset
+# ------------------------------------------------------------------------------
+
+dataset_name = "scores"
+
+df = spark.read.parquet(f"{BRONZE_PATH}/{dataset_name}")
+
+rows_before = df.count()
+
+print(f"Rows Read : {rows_before}")
+
+display(df.limit(10))
+
+
+# ------------------------------------------------------------------------------
+# Step 2 : Data Quality Report
+# ------------------------------------------------------------------------------
+
+print("\nData Quality Report (Before Cleaning)")
+
+quality_report(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 3 : Standardize Column Names
+# ------------------------------------------------------------------------------
+
+df = standardize_columns(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 4 : Trim String Columns
+# ------------------------------------------------------------------------------
+
+df = trim_string_columns(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 5 : Replace Blank Strings with NULL
+# ------------------------------------------------------------------------------
+
+df = blank_to_null(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 6 : Standardize Text
+# ------------------------------------------------------------------------------
+
+df = standardize_text(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 7 : Remove Duplicate Rows
+# ------------------------------------------------------------------------------
+
+before_duplicates = df.count()
+
+df = remove_duplicates(df)
+
+duplicates_removed = before_duplicates - df.count()
+
+
+# ------------------------------------------------------------------------------
+# Step 8 : Fill Numeric NULL Values
+# ------------------------------------------------------------------------------
+
+df = fill_numeric_nulls(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 9 : Remove Invalid Scores
+# ------------------------------------------------------------------------------
+
+invalid_scores = df.filter(
+    (F.col("Team_A_Score") < 0) |
+    (F.col("Team_B_Score") < 0)
+).count()
+
+print(f"Invalid Score Records : {invalid_scores}")
+
+df = df.filter(
+    (F.col("Team_A_Score") >= 0) &
+    (F.col("Team_B_Score") >= 0)
+)
+
+
+# ------------------------------------------------------------------------------
+# Step 10 : Identify Winning Team
+# ------------------------------------------------------------------------------
+
+df = df.withColumn(
+    "Winner",
+
+    F.when(
+        F.col("Team_A_Score") > F.col("Team_B_Score"),
+        F.col("Team_A")
+    )
+
+    .when(
+        F.col("Team_B_Score") > F.col("Team_A_Score"),
+        F.col("Team_B")
+    )
+
+    .otherwise(F.lit("Draw"))
+)
+
+
+# ------------------------------------------------------------------------------
+# Step 11 : Validate Match Result
+# ------------------------------------------------------------------------------
+
+df = df.withColumn(
+
+    "Result_Validation",
+
+    F.when(
+        F.lower(F.col("Match_Result")) == F.lower(F.col("Winner")),
+        "Valid"
+    )
+
+    .otherwise("Mismatch")
+
+)
+
+validation_errors = df.filter(
+    F.col("Result_Validation") == "Mismatch"
+).count()
+
+print(f"Result Validation Errors : {validation_errors}")
+
+
+# ------------------------------------------------------------------------------
+# Step 12 : Remove Empty Rows
+# ------------------------------------------------------------------------------
+
+df = remove_empty_rows(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 13 : Data Quality Report
+# ------------------------------------------------------------------------------
+
+print("\nData Quality Report (After Cleaning)")
+
+quality_report(df)
+
+display(df.limit(10))
+
+
+# ------------------------------------------------------------------------------
+# Step 14 : Write Silver Dataset
+# ------------------------------------------------------------------------------
+
+write_silver(df, dataset_name)
+
+
+# ------------------------------------------------------------------------------
+# Step 15 : Validate Silver Dataset
+# ------------------------------------------------------------------------------
+
+validate_silver(dataset_name)
+
+
+# ------------------------------------------------------------------------------
+# Step 16 : ETL Summary
+# ------------------------------------------------------------------------------
+
+print("\n" + "=" * 80)
+print("ETL EXECUTION SUMMARY")
+print("=" * 80)
+
+print(f"Dataset                 : {dataset_name}")
+print(f"Rows Read               : {rows_before}")
+print(f"Rows Written            : {df.count()}")
+print(f"Duplicates Removed      : {duplicates_removed}")
+print(f"Invalid Scores          : {invalid_scores}")
+print(f"Result Mismatches       : {validation_errors}")
+print(f"Columns                 : {len(df.columns)}")
+print(f"Silver Location         : {SILVER_PATH}/{dataset_name}")
+print("Status                  : SUCCESS")
+
+print("=" * 80)\n########################################\n# ==============================================================================
+# Dataset : team_mapping
+# Layer   : Bronze -> Silver
+# Purpose : Clean & Standardize Team Mapping Lookup Table
+# ==============================================================================
+
+from pyspark.sql import functions as F
+
+print("=" * 80)
+print("Processing Dataset : team_mapping")
+print("=" * 80)
+
+# ------------------------------------------------------------------------------
+# Step 1 : Read Bronze Dataset
+# ------------------------------------------------------------------------------
+
+dataset_name = "team_mapping"
+
+df = spark.read.parquet(f"{BRONZE_PATH}/{dataset_name}")
+
+rows_before = df.count()
+
+print(f"Rows Read : {rows_before}")
+
+display(df.limit(10))
+
+
+# ------------------------------------------------------------------------------
+# Step 2 : Data Quality Report
+# ------------------------------------------------------------------------------
+
+print("\nData Quality Report (Before Cleaning)")
+
+quality_report(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 3 : Standardize Column Names
+# ------------------------------------------------------------------------------
+
+df = standardize_columns(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 4 : Trim String Columns
+# ------------------------------------------------------------------------------
+
+df = trim_string_columns(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 5 : Replace Blank Strings with NULL
+# ------------------------------------------------------------------------------
+
+df = blank_to_null(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 6 : Standardize Text Values
+# ------------------------------------------------------------------------------
+
+df = standardize_text(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 7 : Convert Abbreviations to Uppercase
+#
+# Example:
+# Sen -> SEN
+# g2  -> G2
+# ------------------------------------------------------------------------------
+
+df = df.withColumn(
+    "Abbreviated",
+    F.upper(F.col("Abbreviated"))
+)
+
+
+# ------------------------------------------------------------------------------
+# Step 8 : Remove Duplicate Abbreviations
+# ------------------------------------------------------------------------------
+
+before_duplicates = df.count()
+
+df = df.dropDuplicates(["Abbreviated"])
+
+duplicates_removed = before_duplicates - df.count()
+
+
+# ------------------------------------------------------------------------------
+# Step 9 : Remove Records with Missing Values
+# ------------------------------------------------------------------------------
+
+missing_records = df.filter(
+    F.col("Abbreviated").isNull() |
+    F.col("Full_Name").isNull()
+).count()
+
+print(f"Missing Records : {missing_records}")
+
+df = df.filter(
+    F.col("Abbreviated").isNotNull() &
+    F.col("Full_Name").isNotNull()
+)
+
+
+# ------------------------------------------------------------------------------
+# Step 10 : Remove Completely Empty Rows
+# ------------------------------------------------------------------------------
+
+df = remove_empty_rows(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 11 : Data Quality Report
+# ------------------------------------------------------------------------------
+
+print("\nData Quality Report (After Cleaning)")
+
+quality_report(df)
+
+display(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 12 : Write Silver Dataset
+# ------------------------------------------------------------------------------
+
+write_silver(df, dataset_name)
+
+
+# ------------------------------------------------------------------------------
+# Step 13 : Validate Silver Dataset
+# ------------------------------------------------------------------------------
+
+validate_silver(dataset_name)
+
+
+# ------------------------------------------------------------------------------
+# Step 14 : ETL Summary
+# ------------------------------------------------------------------------------
+
+print("\n" + "=" * 80)
+print("ETL EXECUTION SUMMARY")
+print("=" * 80)
+
+print(f"Dataset                 : {dataset_name}")
+print(f"Rows Read               : {rows_before}")
+print(f"Rows Written            : {df.count()}")
+print(f"Duplicates Removed      : {duplicates_removed}")
+print(f"Missing Records Removed : {missing_records}")
+print(f"Columns                 : {len(df.columns)}")
+print(f"Silver Location         : {SILVER_PATH}/{dataset_name}")
+print("Status                  : SUCCESS")
+
+print("=" * 80)\n########################################\n# ==============================================================================
+# Dataset : win_loss_methods_count
+# Layer   : Bronze -> Silver
+# Purpose : Clean & Validate Win/Loss Method Statistics
+# ==============================================================================
+
+from pyspark.sql import functions as F
+
+print("=" * 80)
+print("Processing Dataset : win_loss_methods_count")
+print("=" * 80)
+
+# ------------------------------------------------------------------------------
+# Step 1 : Read Bronze Dataset
+# ------------------------------------------------------------------------------
+
+dataset_name = "win_loss_methods_count"
+
+df = spark.read.parquet(f"{BRONZE_PATH}/{dataset_name}")
+
+rows_before = df.count()
+
+print(f"Rows Read : {rows_before}")
+
+display(df.limit(10))
+
+
+# ------------------------------------------------------------------------------
+# Step 2 : Data Quality Report
+# ------------------------------------------------------------------------------
+
+print("\nData Quality Report (Before Cleaning)")
+
+quality_report(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 3 : Standardize Column Names
+# ------------------------------------------------------------------------------
+
+df = standardize_columns(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 4 : Trim String Columns
+# ------------------------------------------------------------------------------
+
+df = trim_string_columns(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 5 : Replace Blank Strings with NULL
+# ------------------------------------------------------------------------------
+
+df = blank_to_null(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 6 : Standardize Text
+# ------------------------------------------------------------------------------
+
+df = standardize_text(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 7 : Remove Duplicate Rows
+# ------------------------------------------------------------------------------
+
+before_duplicates = df.count()
+
+df = remove_duplicates(df)
+
+duplicates_removed = before_duplicates - df.count()
+
+
+# ------------------------------------------------------------------------------
+# Step 8 : Fill Numeric NULL Values
+# ------------------------------------------------------------------------------
+
+df = fill_numeric_nulls(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 9 : Validate Numeric Columns
+# ------------------------------------------------------------------------------
+
+numeric_columns = [
+    "elimination",
+    "detonated",
+    "defused",
+    "time_expiry_(no_plant)",
+    "eliminated",
+    "defused_failed",
+    "detonation_denied",
+    "time_expiry_(failed_to_plant)"
+]
+
+invalid_condition = None
+
+for column in numeric_columns:
+
+    condition = F.col(column) < 0
+
+    if invalid_condition is None:
+        invalid_condition = condition
+    else:
+        invalid_condition = invalid_condition | condition
+
+invalid_rows = df.filter(invalid_condition).count()
+
+print(f"Invalid Numeric Records : {invalid_rows}")
+
+df = df.filter(~invalid_condition)
+
+
+# ------------------------------------------------------------------------------
+# Step 10 : Create Total_Rounds Column
+# ------------------------------------------------------------------------------
+
+df = df.withColumn(
+
+    "total_rounds",
+
+    F.col("elimination") +
+    F.col("detonated") +
+    F.col("defused") +
+    F.col("time_expiry_(no_plant)") +
+    F.col("eliminated") +
+    F.col("defused_failed") +
+    F.col("detonation_denied") +
+    F.col("time_expiry_(failed_to_plant)")
+
+)
+
+
+# ------------------------------------------------------------------------------
+# Step 11 : Remove Empty Rows
+# ------------------------------------------------------------------------------
+
+df = remove_empty_rows(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 12 : Data Quality Report
+# ------------------------------------------------------------------------------
+
+print("\nData Quality Report (After Cleaning)")
+
+quality_report(df)
+
+display(df.limit(10))
+
+
+# ------------------------------------------------------------------------------
+# Step 13 : Write Silver Dataset
+# ------------------------------------------------------------------------------
+
+write_silver(df, dataset_name)
+
+
+# ------------------------------------------------------------------------------
+# Step 14 : Validate Silver Dataset
+# ------------------------------------------------------------------------------
+
+validate_silver(dataset_name)
+
+
+# ------------------------------------------------------------------------------
+# Step 15 : ETL Summary
+# ------------------------------------------------------------------------------
+
+print("\n" + "=" * 80)
+print("ETL EXECUTION SUMMARY")
+print("=" * 80)
+
+print(f"Dataset                 : {dataset_name}")
+print(f"Rows Read               : {rows_before}")
+print(f"Rows Written            : {df.count()}")
+print(f"Duplicates Removed      : {duplicates_removed}")
+print(f"Invalid Numeric Rows    : {invalid_rows}")
+print(f"Columns                 : {len(df.columns)}")
+print(f"Silver Location         : {SILVER_PATH}/{dataset_name}")
+print("Status                  : SUCCESS")
+
+print("=" * 80)\n########################################\n# ==============================================================================
+# Dataset : win_loss_methods_round_number
+# Layer   : Bronze -> Silver
+# Purpose : Clean & Validate Round-wise Win/Loss Methods
+# ==============================================================================
+
+from pyspark.sql import functions as F
+
+print("=" * 80)
+print("Processing Dataset : win_loss_methods_round_number")
+print("=" * 80)
+
+# ------------------------------------------------------------------------------
+# Step 1 : Read Bronze Dataset
+# ------------------------------------------------------------------------------
+
+dataset_name = "win_loss_methods_round_number"
+
+df = spark.read.parquet(f"{BRONZE_PATH}/{dataset_name}")
+
+rows_before = df.count()
+
+print(f"Rows Read : {rows_before}")
+
+display(df.limit(10))
+
+
+# ------------------------------------------------------------------------------
+# Step 2 : Data Quality Report
+# ------------------------------------------------------------------------------
+
+print("\nData Quality Report (Before Cleaning)")
+
+quality_report(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 3 : Standardize Column Names
+# ------------------------------------------------------------------------------
+
+df = standardize_columns(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 4 : Trim String Columns
+# ------------------------------------------------------------------------------
+
+df = trim_string_columns(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 5 : Replace Blank Strings with NULL
+# ------------------------------------------------------------------------------
+
+df = blank_to_null(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 6 : Standardize Text Values
+# ------------------------------------------------------------------------------
+
+df = standardize_text(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 7 : Remove Duplicate Rows
+# ------------------------------------------------------------------------------
+
+before_duplicates = df.count()
+
+df = remove_duplicates(df)
+
+duplicates_removed = before_duplicates - df.count()
+
+
+# ------------------------------------------------------------------------------
+# Step 8 : Fill Numeric NULL Values
+# ------------------------------------------------------------------------------
+
+df = fill_numeric_nulls(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 9 : Validate Round Number
+# ------------------------------------------------------------------------------
+
+invalid_rounds = df.filter(F.col("Round_Number") <= 0).count()
+
+print(f"Invalid Round Numbers : {invalid_rounds}")
+
+df = df.filter(F.col("Round_Number") > 0)
+
+
+# ------------------------------------------------------------------------------
+# Step 10 : Standardize Method Values
+#
+# Example:
+# "time expiry(no plant)"
+# ->
+# "Time Expiry (No Plant)"
+# ------------------------------------------------------------------------------
+
+df = df.withColumn(
+    "Method",
+    F.initcap(F.trim(F.col("Method")))
+)
+
+
+# ------------------------------------------------------------------------------
+# Step 11 : Validate Outcome
+# ------------------------------------------------------------------------------
+
+valid_outcomes = ["Win", "Loss"]
+
+invalid_outcomes = df.filter(
+    ~F.col("Outcome").isin(valid_outcomes)
+).count()
+
+print(f"Invalid Outcomes : {invalid_outcomes}")
+
+df = df.filter(
+    F.col("Outcome").isin(valid_outcomes)
+)
+
+
+# ------------------------------------------------------------------------------
+# Step 12 : Create Round Identifier
+# ------------------------------------------------------------------------------
+
+df = df.withColumn(
+    "Round_ID",
+    F.concat_ws(
+        "_",
+        F.col("Tournament"),
+        F.col("Match_Name"),
+        F.col("Map"),
+        F.col("Round_Number")
+    )
+)
+
+
+# ------------------------------------------------------------------------------
+# Step 13 : Remove Completely Empty Rows
+# ------------------------------------------------------------------------------
+
+df = remove_empty_rows(df)
+
+
+# ------------------------------------------------------------------------------
+# Step 14 : Data Quality Report
+# ------------------------------------------------------------------------------
+
+print("\nData Quality Report (After Cleaning)")
+
+quality_report(df)
+
+display(df.limit(10))
+
+
+# ------------------------------------------------------------------------------
+# Step 15 : Write Silver Dataset
+# ------------------------------------------------------------------------------
+
+write_silver(df, dataset_name)
+
+
+# ------------------------------------------------------------------------------
+# Step 16 : Validate Silver Dataset
+# ------------------------------------------------------------------------------
+
+validate_silver(dataset_name)
+
+
+# ------------------------------------------------------------------------------
+# Step 17 : ETL Summary
+# ------------------------------------------------------------------------------
+
+print("\n" + "=" * 80)
+print("ETL EXECUTION SUMMARY")
+print("=" * 80)
+
+print(f"Dataset                 : {dataset_name}")
+print(f"Rows Read               : {rows_before}")
+print(f"Rows Written            : {df.count()}")
+print(f"Duplicates Removed      : {duplicates_removed}")
+print(f"Invalid Round Numbers   : {invalid_rounds}")
+print(f"Invalid Outcomes        : {invalid_outcomes}")
+print(f"Columns                 : {len(df.columns)}")
+print(f"Silver Location         : {SILVER_PATH}/{dataset_name}")
+print("Status                  : SUCCESS")
+
+print("=" * 80)\n########################################\n\n--- CODE FROM agents.ipynb ---\ndf = spark.read.parquet("/Volumes/workspace/default/matrica/bronze/vct_2025/agents/agents_pick_rates")
+df.printSchema()
+df.show(5, truncate=False)\n########################################\ndf = spark.read.parquet("/Volumes/workspace/default/matrica/bronze/vct_2025/agents/maps_stats")
+df.printSchema()
+df.show(5, truncate=False)\n########################################\ndf = spark.read.parquet("/Volumes/workspace/default/matrica/bronze/vct_2025/agents/teams_picked_agents")
+df.printSchema()
+df.show(5, truncate=False)\n########################################\nfrom pyspark.sql.functions import *
+from pyspark.sql.types import *
+
+# ==========================================================
+# PATHS
+# ==========================================================
+
+bronze_path = "/Volumes/workspace/default/matrica/bronze/vct_2025/agents/agents_pick_rates"
+silver_path = "/Volumes/workspace/default/matrica/silver/vct_2025/agents/agents_pick_rates"
+
+# ==========================================================
+# READ PARQUET
+# ==========================================================
+
+df = spark.read.parquet(bronze_path)
+
+print("=" * 120)
+print("PROCESSING DATASET : agents_pick_rates")
+print("=" * 120)
+
+rows_before = df.count()
+
+print(f"\nRows Before Cleaning : {rows_before}")
+print(f"Columns : {len(df.columns)}")
+
+print("\nSchema")
+df.printSchema()
+
+print("\nFirst 10 Records")
+df.show(10, truncate=False)
+
+# ==========================================================
+# DUPLICATE COUNT
+# ==========================================================
+
+duplicates = rows_before - df.dropDuplicates().count()
+
+print(f"\nDuplicate Rows : {duplicates}")
+
+# ==========================================================
+# NULL COUNT
+# ==========================================================
+
+print("\nNull Count")
+
+df.select([
+    count(
+        when(col(c).isNull(), c)
+    ).alias(c)
+    for c in df.columns
+]).show(truncate=False)
+
+# ==========================================================
+# BLANK STRING COUNT
+# ==========================================================
+
+print("\nBlank String Count")
+
+for c, dtype in df.dtypes:
+
+    if dtype == "string":
+
+        blank = df.filter(trim(col(c)) == "").count()
+
+        print(f"{c} : {blank}")
+
+# ==========================================================
+# DATA CLEANING
+# ==========================================================
+
+# Remove duplicate rows
+df = df.dropDuplicates()
+
+# Remove rows where all columns are NULL
+df = df.na.drop(how="all")
+
+# Trim all string columns
+for c, dtype in df.dtypes:
+
+    if dtype == "string":
+
+        df = df.withColumn(c, trim(col(c)))
+
+# Replace empty strings with NULL
+df = df.replace("", None)
+
+# ==========================================================
+# MAINTAIN CONSISTENT GRANULARITY
+# ==========================================================
+
+df = df.withColumn(
+    "Stage",
+    when(
+        lower(col("Stage")) == "all stages",
+        None
+    ).otherwise(col("Stage"))
+)
+
+df = df.withColumn(
+    "Match Type",
+    when(
+        lower(col("Match Type")) == "all match types",
+        None
+    ).otherwise(col("Match Type"))
+)
+
+df = df.withColumn(
+    "Map",
+    when(
+        lower(col("Map")) == "all maps",
+        None
+    ).otherwise(col("Map"))
+)
+
+# ==========================================================
+# REMOVE AGGREGATE ROWS
+# ==========================================================
+
+df = df.filter(col("Stage").isNotNull())
+df = df.filter(col("Match Type").isNotNull())
+df = df.filter(col("Map").isNotNull())
+
+# ==========================================================
+# STANDARDIZE AGENT NAMES
+# ==========================================================
+
+df = df.withColumn(
+    "Agent",
+    initcap(lower(col("Agent")))
+)
+
+# ==========================================================
+# CONVERT PICK RATE
+# 95% -> 0.95
+# ==========================================================
+
+df = df.withColumn(
+    "Pick Rate",
+    (
+        regexp_replace(col("Pick Rate"), "%", "")
+        .cast("double") / 100
+    )
+)
+
+# ==========================================================
+# STANDARDIZE COLUMN NAMES
+# ==========================================================
+
+for c in df.columns:
+
+    new_name = (
+        c.lower()
+         .replace(" ", "_")
+         .replace("-", "_")
+    )
+
+    df = df.withColumnRenamed(c, new_name)
+
+# ==========================================================
+# AFTER CLEANING
+# ==========================================================
+
+rows_after = df.count()
+
+print(f"\nRows After Cleaning : {rows_after}")
+
+print(f"Rows Removed : {rows_before - rows_after}")
+
+print("\nUpdated Schema")
+
+df.printSchema()
+
+print("\nFirst 10 Cleaned Records")
+
+df.show(10, truncate=False)
+
+# ==========================================================
+# WRITE TO SILVER
+# ==========================================================
+
+(
+    df.write
+      .mode("overwrite")
+      .parquet(silver_path)
+)
+
+print("\nSaved To")
+
+print(silver_path)
+
+print("=" * 120)
+print("Bronze  Silver ETL Completed Successfully")
+print("=" * 120)\n########################################\n
