@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Routes, Route, NavLink } from 'react-router-dom'
 import { Home, MessageSquare, BarChart2, Moon, Sun, Sparkles, Cpu, Crosshair, ArrowRight } from 'lucide-react'
 import axios from 'axios'
+import ReactMarkdown from 'react-markdown'
 
 import matricaLogo from './assets/matrica-logo.png'
 import valorantBg from './assets/valorant-bg.jpg'
@@ -442,7 +443,13 @@ const Chat = ({ isDarkMode }: ThemeProps) => {
                   : 'mr-auto bg-white/90 text-slate-900 border-transparent rounded-bl-none shadow-md'
             }`}
           >
-            {m.content}
+            {m.role === 'ai' ? (
+              <div className="markdown-body">
+                <ReactMarkdown>{m.content}</ReactMarkdown>
+              </div>
+            ) : (
+              m.content
+            )}
           </div>
         ))}
         {loading && <div className={`mr-auto max-w-[85%] rounded-xl rounded-bl-none p-3 text-sm font-bold uppercase tracking-wider border shadow-sm animate-pulse flex items-center gap-2 transition-all duration-700 ease-in-out ${isDarkMode ? 'bg-slate-800 text-[#ff2a2a] border-white/10' : 'bg-white/90 text-[#ff2a2a] border-transparent'}`}>
