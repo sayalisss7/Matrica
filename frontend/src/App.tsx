@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Routes, Route, NavLink } from 'react-router-dom'
-import { Home, MessageSquare, BarChart2, Moon, Sun, Sparkles, Cpu, Crosshair, ArrowRight } from 'lucide-react'
+import { Home, MessageSquare, BarChart2, Moon, Sun, Sparkles, Cpu, Crosshair, ArrowRight, TrendingUp, Users, Activity } from 'lucide-react'
 import axios from 'axios'
 import ReactMarkdown from 'react-markdown'
+
 
 import matricaLogo from './assets/matrica-logo.png'
 import valorantBg from './assets/valorant-bg.jpg'
@@ -17,47 +18,78 @@ type ThemeProps = {
 const HomePage = ({ isDarkMode }: ThemeProps) => {
 
   const shellClass = isDarkMode
-    ? "border-white/10 bg-black/10 text-white shadow-[0_0_30px_rgba(0,0,0,0.3)] backdrop-blur-sm"
-    : "border-transparent bg-white/30 text-slate-900 shadow-[0_0_30px_rgba(255,255,255,0.4)] backdrop-blur-md";
+    ? "border border-white/5 bg-black/40 text-white shadow-2xl backdrop-blur-xl"
+    : "border border-slate-300 bg-white/60 text-slate-900 shadow-2xl backdrop-blur-xl";
 
   const subText = isDarkMode
     ? "text-slate-300"
     : "text-slate-900 font-bold";
 
   const statCardClass = isDarkMode
-    ? "border-white/10 bg-black/20 text-slate-100 hover:bg-white/10 hover:border-[#ff2a2a]/50"
-    : "border-transparent bg-white/40 text-slate-900 hover:bg-white/60 shadow-sm";
+    ? "border border-white/5 bg-black/30 text-slate-100 hover:bg-black/50 hover:border-[#ff2a2a]/40 hover:shadow-[0_0_20px_rgba(255,42,42,0.15)] transition-all duration-300"
+    : "border border-slate-200 bg-white/50 text-slate-900 hover:bg-white/80 hover:border-slate-300 hover:shadow-lg transition-all duration-300 shadow-sm";
 
   const [cards, setCards] = useState([
     {
-      title: "Loading...",
-      score: "--",
-      subtitle: "Connecting to Matrica DB",
-      footer: "Please wait...",
+      title: "TenZ",
+      score: "98",
+      subtitle: "Top Rated | Sentinels",
+      footer: "Est. Cost: ₹45,000",
+      achievements: [
+        "🏆 VCT Americas 2024 Champion",
+        "📈 +150k Twitch Followers this month",
+        "🎯 1.34 Series K/D Ratio"
+      ]
     },
     {
-      title: "Loading...",
-      score: "--",
-      subtitle: "Connecting to Matrica DB",
-      footer: "Please wait...",
+      title: "Demon1",
+      score: "95",
+      subtitle: "Trending | NRG",
+      footer: "Est. Cost: ₹30,000",
+      achievements: [
+        "🏆 Valorant Champions 2023 MVP",
+        "📈 Highest VLR Rating globally",
+        "💥 42% Headshot percentage"
+      ]
     },
     {
-      title: "Loading...",
-      score: "--",
-      subtitle: "Connecting to Matrica DB",
-      footer: "Please wait...",
+      title: "Boaster",
+      score: "90",
+      subtitle: "IGL Leader | FNATIC",
+      footer: "Est. Cost: ₹25,000",
+      achievements: [
+        "🏆 VCT LOCK//IN São Paulo Winner",
+        "🗣️ Highest Brand Safety Score",
+        "🌍 Massive EMEA Audience Reach"
+      ]
     },
     {
-      title: "Loading...",
-      score: "--",
-      subtitle: "Connecting to Matrica DB",
-      footer: "Please wait...",
+      title: "Aspas",
+      score: "88",
+      subtitle: "Duelist | Leviatán",
+      footer: "Est. Cost: ₹35,000",
+      achievements: [
+        "🏆 VCT Americas MVP 2024",
+        "🔪 Most First Bloods in League",
+        "📈 Fastest growing LATAM channel"
+      ]
     }
   ]);
 
   useEffect(() => {
     axios.get('http://localhost:8000/api/dashboard/recommendations')
-      .then(res => setCards(res.data))
+      .then(res => {
+          if(res.data && res.data.length > 0) {
+             // Map data to include dummy trends if not provided
+             const mapped = res.data.map((c: any) => ({
+                 ...c,
+                 trend: c.trend || [{val: Math.random()*100}, {val: Math.random()*100}, {val: Math.random()*100}, {val: Math.random()*100}, {val: parseInt(c.score)||80}],
+                 reach: c.reach || (Math.random() * 3 + 1).toFixed(1) + "M",
+                 roi: c.roi || "High"
+             }));
+             setCards(mapped);
+          }
+      })
       .catch(err => console.error("Failed to fetch dashboard data:", err));
   }, []);
 
@@ -147,65 +179,51 @@ const HomePage = ({ isDarkMode }: ThemeProps) => {
 
           {/* Cards */}
 
-          <div className="grid lg:grid-cols-2 gap-6">
-
-            {cards.map((card) => (
-
+<div className="grid lg:grid-cols-2 gap-6">
+            {cards.map((card, idx) => (
               <div
-                key={card.title}
-                className={`rounded-2xl p-6 transition duration-300 cursor-pointer group ${
+                key={idx}
+                className={`rounded-2xl p-6 transition-all duration-300 cursor-pointer group relative overflow-hidden ${
                   isDarkMode
-                    ? "bg-black/30 border border-white/10 hover:border-[#ff2a2a] hover:shadow-[0_0_25px_rgba(255,70,85,0.35)]"
-                    : "bg-white/50"
+                    ? "bg-black/40 border border-white/5 hover:border-white/20 hover:bg-black/60 shadow-xl"
+                    : "bg-white/60 border border-slate-200 hover:border-slate-300 hover:bg-white/80 hover:shadow-lg"
                 }`}
               >
-
-                <div className="flex justify-between items-center">
-
+                {/* Header row */}
+                <div className="flex justify-between items-start mb-4">
                   <div>
-
-                    <h3 className="text-2xl font-black">
-
+                    <h3 className={`text-2xl font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                       {card.title}
-
                     </h3>
-
-                    <p className="text-[#ff4655] font-bold mt-1">
-
+                    <p className={`font-bold mt-1 text-xs uppercase tracking-widest ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                       {card.subtitle}
-
                     </p>
-
                   </div>
-
-                  <div className="h-20 w-20 rounded-full border-4 border-[#ff4655] flex items-center justify-center text-2xl font-black text-[#ff4655] group-hover:scale-110 transition">
-
-                    {card.score}
-
+                  <div className="flex flex-col items-end">
+                    <div className="flex items-center gap-1 bg-[#ff2a2a]/10 px-3 py-1 rounded-full border border-[#ff2a2a]/20">
+                      <TrendingUp size={14} className="text-[#ff2a2a]" />
+                      <span className="text-[#ff2a2a] font-bold text-sm">Rating: {card.score}</span>
+                    </div>
                   </div>
-
                 </div>
 
-                <div className="mt-6 flex justify-between items-center">
-
-                  <span className="text-sm text-gray-400">
-
-                    {card.footer}
-
-                  </span>
-
-                  <button className="px-4 py-2 rounded-lg bg-[#ff4655] hover:bg-[#ff5f6d] font-bold transition">
-
-                    View Details
-
-                  </button>
-
+                {/* Achievements List */}
+                <div className={`my-4 p-4 rounded-xl ${isDarkMode ? 'bg-black/30' : 'bg-slate-50 border border-slate-100'}`}>
+                  <div className="flex items-center gap-2 text-xs uppercase text-slate-400 mb-3 font-bold tracking-wider">
+                    <Sparkles size={12} className="text-[#ff2a2a]" /> Career Highlights
+                  </div>
+                  <ul className="space-y-2">
+                    {card.achievements?.map((achieve: string, i: number) => (
+                      <li key={i} className={`text-sm font-bold flex items-start gap-2 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                        <span className="opacity-80 leading-5">{achieve}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
+
 
               </div>
-
             ))}
-
           </div>
 
         </div>
@@ -280,7 +298,7 @@ const Sponsors = ({ isDarkMode }: ThemeProps) => {
           className={`absolute inset-0 bg-cover bg-[center_top] bg-no-repeat transition-all duration-700 ease-in-out ${isDarkMode ? 'opacity-50 mix-blend-screen' : 'opacity-80'}`}
           style={{ backgroundImage: `url('${horizBg}')` }}
         />
-        <div className={`absolute inset-0 transition-all duration-700 ease-in-out ${isDarkMode ? 'bg-gradient-to-r from-black/90 via-black/40 to-black/80' : 'bg-gradient-to-r from-white/90 via-white/40 to-white/80'}`} />
+        <div className={`absolute inset-0 transition-all duration-700 ease-in-out ${isDarkMode ? 'bg-gradient-to-r from-black/90 via-black/60 to-black/90 backdrop-blur-sm' : 'bg-gradient-to-r from-white/90 via-white/60 to-white/90 backdrop-blur-sm'}`} />
         
         <div className="relative z-10 p-5 flex items-center justify-between">
           <div>
@@ -416,12 +434,12 @@ const Chat = ({ isDarkMode }: ThemeProps) => {
   return (
     <div className="p-6 flex flex-col h-full max-h-screen page-enter">
       
-      <div className={`shrink-0 relative mb-4 rounded-2xl overflow-hidden transition-all duration-700 ease-in-out ${isDarkMode ? 'border border-[#ff2a2a]/20 shadow-[0_0_15px_rgba(0,0,0,0.5)]' : 'border-none shadow-md'}`}>
+      <div className={`shrink-0 relative mb-4 rounded-2xl overflow-hidden transition-all duration-700 ease-in-out ${isDarkMode ? 'border border-white/5 shadow-2xl' : 'border-none shadow-md'}`}>
         <div
           className={`absolute inset-0 bg-cover bg-[center_top] bg-no-repeat transition-all duration-700 ease-in-out ${isDarkMode ? 'opacity-50 mix-blend-screen' : 'opacity-80'}`}
           style={{ backgroundImage: `url('${horizBg}')` }}
         />
-        <div className={`absolute inset-0 transition-all duration-700 ease-in-out ${isDarkMode ? 'bg-gradient-to-r from-black/90 via-black/40 to-black/80' : 'bg-gradient-to-r from-white/90 via-white/40 to-white/80'}`} />
+        <div className={`absolute inset-0 transition-all duration-700 ease-in-out ${isDarkMode ? 'bg-gradient-to-r from-black/90 via-black/60 to-black/90 backdrop-blur-sm' : 'bg-gradient-to-r from-white/90 via-white/60 to-white/90 backdrop-blur-sm'}`} />
         
         <div className="relative z-10 p-5">
           <h1 className={`text-2xl md:text-3xl font-extrabold uppercase tracking-wide flex items-center gap-3 transition-colors duration-700 ${isDarkMode ? 'text-white' : 'text-black drop-shadow-md'}`}>
@@ -492,7 +510,7 @@ const Chat = ({ isDarkMode }: ThemeProps) => {
 function App() {
   const [isDarkMode, setIsDarkMode] = useState(true)
 
-  const appShellClass = isDarkMode ? 'bg-[#0d0d12] text-white' : 'bg-slate-50 text-slate-900'
+  const appShellClass = isDarkMode ? 'bg-[#0d0d12] text-white' : 'bg-slate-100 text-slate-900'
   const sidebarClass = isDarkMode ? 'border-white/10 bg-black/80 backdrop-blur-xl' : 'border-transparent bg-white/40 backdrop-blur-xl'
   
   const navItemClass = ({ isActive }: { isActive: boolean }) =>
@@ -534,7 +552,7 @@ function App() {
         </div>
 
         {/* Tab Navigation Container rendering horizontal.jpg (tabBg) */}
-        <div className={`relative mx-4 mt-5 flex-1 rounded-2xl overflow-hidden transition-all duration-700 ease-in-out ${isDarkMode ? 'border border-[#ff2a2a]/20 shadow-[0_0_15px_rgba(0,0,0,0.5)]' : 'border-none shadow-[0_0_15px_rgba(255,42,42,0.3)]'}`}>
+        <div className={`relative mx-4 mt-5 flex-1 rounded-2xl overflow-hidden transition-all duration-700 ease-in-out ${isDarkMode ? 'border border-white/5 shadow-2xl' : 'border-none shadow-[0_0_15px_rgba(255,42,42,0.3)]'}`}>
           
           <div
             className={`absolute inset-0 bg-cover bg-[center_top] bg-no-repeat transition-all duration-700 ease-in-out ${isDarkMode ? 'opacity-50 mix-blend-screen' : 'opacity-80'}`}
