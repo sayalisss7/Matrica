@@ -272,7 +272,8 @@ const Sponsors = ({ isDarkMode }: ThemeProps) => {
   const summary = typeof results?.summary === 'string' ? results.summary : ''
 
   return (
-    <div className="p-4 md:p-6 h-full flex flex-col max-w-5xl mx-auto space-y-3 page-enter">
+    <div className="p-4 md:p-6 h-full overflow-y-auto page-enter">
+      <div className="flex flex-col max-w-5xl mx-auto space-y-3">
       
       <div className={`relative rounded-2xl overflow-hidden transition-all duration-700 ease-in-out ${isDarkMode ? 'border border-[#ff2a2a]/20 shadow-lg' : 'border-none shadow-md'} shrink-0`}>
         <div
@@ -348,7 +349,7 @@ const Sponsors = ({ isDarkMode }: ThemeProps) => {
       {error && <div className={`shrink-0 rounded-xl border p-3 text-xs text-red-400 font-bold transition-all duration-700 ${isDarkMode ? 'border-red-900 bg-red-950/60' : 'border-red-500 bg-red-50 text-red-700 shadow-md'}`}>{error}</div>}
 
       {results && (
-        <div className={`transition-all duration-700 ease-in-out ${cardClass} rounded-2xl p-5 shadow-xl page-enter flex-1 overflow-y-auto min-h-0`}>
+        <div className={`transition-all duration-700 ease-in-out ${cardClass} rounded-2xl p-5 shadow-xl page-enter flex flex-col shrink-0`}>
           <h2 className={`mb-4 text-xl font-extrabold uppercase tracking-wide ${pageText}`}>Top Recommended Players</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
@@ -385,6 +386,7 @@ const Sponsors = ({ isDarkMode }: ThemeProps) => {
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }

@@ -8,11 +8,12 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.documents import Document
 
 # Setup paths
-base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Setup paths (This file is in backend/scripts, so base_dir is 2 levels up)
+base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 load_dotenv(os.path.join(base_dir, ".env"))
 
-chroma_dir = os.path.join(base_dir, "chromadb")
-json_path = os.path.join(base_dir, "articles", "valorant_player_news_2025.json")
+chroma_dir = os.path.join(base_dir, "data", "chromadb")
+json_path = os.path.join(base_dir, "data", "raw_articles", "valorant_player_news_2025.json")
 
 def ingest_articles_to_chroma():
     print(f"Reading JSON from {json_path}...")

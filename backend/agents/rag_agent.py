@@ -4,7 +4,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 
 def get_rag_retriever():
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    chroma_dir = os.path.join(base_dir, 'chromadb')
+    chroma_dir = os.path.join(base_dir, 'data', 'chromadb')
     
     if not os.path.exists(chroma_dir):
         return None
