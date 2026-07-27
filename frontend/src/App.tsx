@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Routes, Route, NavLink } from 'react-router-dom'
-import { Home, MessageSquare, BarChart2, Moon, Sun, Sparkles, Cpu, Crosshair, ArrowRight, TrendingUp, Users, Activity } from 'lucide-react'
+import { Home, MessageSquare, BarChart2, Moon, Sun, Sparkles, Cpu, Crosshair, ArrowRight, TrendingUp, Users, Activity, XCircle, Edit2, Square, Check, X } from 'lucide-react'
 import axios from 'axios'
 import ReactMarkdown from 'react-markdown'
 
@@ -237,7 +237,8 @@ const HomePage = ({ isDarkMode }: ThemeProps) => {
 };
 
 const Sponsors = ({ isDarkMode }: ThemeProps) => {
-  const [budget, setBudget] = useState(50000)
+  const [budget, setBudget] = useState<string | number>(50000)
+  const [showErrorPopup, setShowErrorPopup] = useState(false)
   const [popWeight, setPopWeight] = useState(33)
   const [repWeight, setRepWeight] = useState(33)
   const [skillWeight, setSkillWeight] = useState(33)
@@ -272,11 +273,16 @@ const Sponsors = ({ isDarkMode }: ThemeProps) => {
   }
 
   const runMatch = async () => {
+    const numBudget = Number(budget);
+    if (isNaN(numBudget) || numBudget < 0 || budget === '') {
+      setShowErrorPopup(true);
+      return;
+    }
     setLoading(true)
     setError('')
     try {
       const res = await axios.post('http://localhost:8000/api/match_sponsor', {
-        budget, popWeight, repWeight, skillWeight
+        budget: numBudget, popWeight, repWeight, skillWeight
       })
       setResults(res.data)
     } catch (err: any) {
@@ -326,7 +332,7 @@ const Sponsors = ({ isDarkMode }: ThemeProps) => {
 
         <div className={`transition-all duration-700 ease-in-out ${cardClass} rounded-2xl p-4 shadow-lg flex-1 flex flex-col justify-center`}>
           <label className={`mb-1 block text-xs font-bold uppercase tracking-wider transition-colors duration-700 ${isDarkMode ? 'text-slate-300' : 'text-slate-900 drop-shadow-sm'}`}>Max Budget (₹)</label>
-          <input type="number" value={budget} onChange={(e) => setBudget(Number(e.target.value))} className={`transition-all duration-700 ${inputClass}`} />
+          <input type="text" value={budget} onChange={(e) => setBudget(e.target.value)} className={`transition-all duration-700 ${inputClass}`} />
         </div>
       </div>
 
@@ -405,6 +411,26 @@ const Sponsors = ({ isDarkMode }: ThemeProps) => {
         </div>
       )}
       </div>
+
+      {showErrorPopup && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm page-enter">
+          <div className="relative w-80 rounded-2xl border-2 border-[#ff2a2a] bg-[#0a0a0f] p-6 shadow-[0_0_30px_rgba(255,42,42,0.6)]">
+            <div className="mb-4 flex items-center justify-center text-[#ff2a2a]">
+               <XCircle size={40} className="animate-pulse drop-shadow-[0_0_10px_#ff2a2a]" />
+            </div>
+            <h3 className="mb-2 text-center text-xl font-black uppercase tracking-widest text-white drop-shadow-md">Invalid</h3>
+            <p className="mb-6 text-center text-sm font-bold text-slate-400">
+              Please enter a valid maximum budget amount.
+            </p>
+            <button
+              onClick={() => setShowErrorPopup(false)}
+              className="w-full rounded-xl bg-[#ff2a2a] py-2.5 font-black uppercase tracking-wider text-white transition-all hover:bg-white hover:text-[#ff2a2a] hover:shadow-[0_0_15px_#ff2a2a]"
+            >
+              Acknowledge
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -418,21 +444,63 @@ const Chat = ({ isDarkMode, messages, setMessages }: ChatProps) => {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleSend = async () => {
-    if (!input.trim()) return
-    const userMsg = input
-    setMessages(prev => [...prev, { role: 'user', content: userMsg }])
-    setInput('')
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [editInput, setEditInput] = useState('')
+
+  const handleSend = async (overrideInput?: string) => {
+    const textToSend = overrideInput !== undefined ? overrideInput : input
+    if (!textToSend.trim()) return
+    
+    if (overrideInput === undefined) {
+      setMessages(prev => [...prev, { role: 'user', content: textToSend }])
+      setInput('')
+    }
     setLoading(true)
     
+    abortControllerRef.current = new AbortController()
+    
     try {
-      const res = await axios.post('http://localhost:8000/api/chat', { query: userMsg })
+      const res = await axios.post('http://localhost:8000/api/chat', { query: textToSend }, {
+        signal: abortControllerRef.current.signal
+      })
       setMessages(prev => [...prev, { role: 'ai', content: res.data.answer }])
-    } catch (err) {
-      setMessages(prev => [...prev, { role: 'ai', content: 'Error connecting to Matrica backend.' }])
+    } catch (err: any) {
+      if (axios.isCancel(err)) {
+        console.log('Request canceled by user');
+      } else {
+        setMessages(prev => [...prev, { role: 'ai', content: 'Error connecting to Matrica backend.' }])
+      }
     } finally {
       setLoading(false)
+      abortControllerRef.current = null
     }
+  }
+
+  const handleStop = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      setMessages(prev => [...prev, { role: 'ai', content: '*Generation stopped by user.*' }])
+    }
+  }
+
+  const startEdit = (index: number, content: string) => {
+    setEditingIndex(index)
+    setEditInput(content)
+  }
+
+  const cancelEdit = () => {
+    setEditingIndex(null)
+    setEditInput('')
+  }
+
+  const saveEdit = (index: number) => {
+    if (!editInput.trim()) return
+    const updatedMessages = messages.slice(0, index)
+    updatedMessages.push({ role: 'user', content: editInput })
+    setMessages(updatedMessages)
+    setEditingIndex(null)
+    handleSend(editInput)
   }
 
   return (
@@ -455,19 +523,45 @@ const Chat = ({ isDarkMode, messages, setMessages }: ChatProps) => {
       
       <div className={`mb-4 flex-1 space-y-3 overflow-y-auto rounded-xl p-5 shadow-lg backdrop-blur-md transition-all duration-700 ease-in-out ${isDarkMode ? 'bg-black/45 border border-white/10' : 'bg-white/40 border-transparent'}`}>
         {messages.length === 0 && !loading && (
-          <div className="h-full flex flex-col items-center justify-center text-center opacity-90 transition-opacity duration-700">
+          <div className="h-full flex flex-col items-center justify-center text-center opacity-90 transition-opacity duration-700 w-full">
             <Cpu size={40} className="text-[#ff2a2a] mb-3 drop-shadow-[0_0_10px_rgba(255,42,42,0.6)]" />
             <p className={`text-lg font-black uppercase tracking-widest transition-colors duration-700 ${isDarkMode ? 'text-white' : 'text-black drop-shadow-md'}`}>Secure Channel Established</p>
-            <p className={`mt-1 text-sm font-bold transition-colors duration-700 ${isDarkMode ? 'text-slate-400' : 'text-slate-800'}`}>Awaiting telemetry queries...</p>
+            <p className={`mt-1 text-sm font-bold transition-colors duration-700 ${isDarkMode ? 'text-slate-400' : 'text-slate-800'}`}>Awaiting telemetry queries or select a suggested analysis below:</p>
+            
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl w-full px-4">
+              {[
+                "Run a complete quantitative and qualitative analysis on the player 'TenZ'.",
+                "Which team won the most eco rounds in the VCT Americas tournament?",
+                "Compare the average combat score (ACS) and headshot percentages of Demon1 and Aspas.",
+                "What is the latest community sentiment and news around FNATIC Boaster?"
+              ].map((q, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleSend(q)}
+                  className={`text-left p-4 rounded-xl border transition-all duration-300 group relative overflow-hidden ${
+                    isDarkMode 
+                      ? 'border-white/10 bg-black/40 hover:border-[#ff2a2a]/50 hover:bg-[#ff2a2a]/10 hover:shadow-[0_0_15px_rgba(255,42,42,0.2)]' 
+                      : 'border-slate-300 bg-white/60 hover:border-[#ff2a2a]/50 hover:bg-red-50 hover:shadow-md'
+                  }`}
+                >
+                  <p className={`text-xs font-bold leading-relaxed transition-colors ${isDarkMode ? 'text-slate-300 group-hover:text-white' : 'text-slate-700 group-hover:text-black'}`}>
+                    "{q}"
+                  </p>
+                  <div className="mt-2 flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-[#ff2a2a] opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ArrowRight size={10} /> Auto-Execute
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         )}
         
         {messages.map((m, i) => (
           <div
             key={i}
-            className={`max-w-[85%] rounded-xl p-3 text-sm font-bold shadow-sm page-enter transition-all duration-700 ease-in-out ${
+            className={`max-w-[85%] w-fit rounded-xl p-3 text-sm font-bold shadow-sm page-enter transition-all duration-700 ease-in-out group relative ${
               m.role === 'user'
-                ? 'ml-auto bg-[#ff2a2a] text-white shadow-[0_0_10px_rgba(255,42,42,0.6)] rounded-br-none border border-red-400'
+                ? 'ml-auto bg-gradient-to-br from-[#ff2a2a]/90 to-[#800000]/80 backdrop-blur-md text-white shadow-[0_0_15px_rgba(255,42,42,0.5)] rounded-br-none border border-white/20'
                 : isDarkMode
                   ? 'mr-auto bg-slate-800 text-slate-100 border border-white/10 rounded-bl-none'
                   : 'mr-auto bg-white/90 text-slate-900 border-transparent rounded-bl-none shadow-md'
@@ -477,16 +571,44 @@ const Chat = ({ isDarkMode, messages, setMessages }: ChatProps) => {
               <div className={`prose ${isDarkMode ? 'prose-invert' : ''} prose-sm max-w-none prose-p:leading-relaxed prose-li:my-0`}>
                 <ReactMarkdown>{m.content}</ReactMarkdown>
               </div>
+            ) : editingIndex === i ? (
+              <div className="flex flex-col gap-2 min-w-[250px] sm:min-w-[400px]">
+                <textarea
+                  className="w-full rounded-lg bg-black/40 border border-white/30 p-2 text-sm text-white outline-none focus:border-white resize-none"
+                  value={editInput}
+                  onChange={(e) => setEditInput(e.target.value)}
+                  rows={3}
+                />
+                <div className="flex justify-end gap-2">
+                  <button onClick={cancelEdit} className="flex items-center gap-1 rounded bg-black/40 px-2 py-1 text-xs hover:bg-black/60 transition-colors"><X size={12}/> Cancel</button>
+                  <button onClick={() => saveEdit(i)} className="flex items-center gap-1 rounded bg-white text-[#ff2a2a] px-2 py-1 text-xs font-black hover:bg-gray-200 transition-colors"><Check size={12}/> Save & Submit</button>
+                </div>
+              </div>
             ) : (
-              m.content
+              <>
+                {m.content}
+                <button 
+                  onClick={() => startEdit(i, m.content)}
+                  className="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 p-1.5 rounded-full bg-black/50 text-white hover:bg-[#ff2a2a] shadow-lg hover:shadow-[0_0_10px_#ff2a2a] hover:scale-110"
+                  title="Edit message"
+                >
+                  <Edit2 size={14} />
+                </button>
+              </>
             )}
           </div>
         ))}
-        {loading && <div className={`mr-auto max-w-[85%] rounded-xl rounded-bl-none p-3 text-sm font-bold uppercase tracking-wider border shadow-sm animate-pulse flex items-center gap-2 transition-all duration-700 ease-in-out ${isDarkMode ? 'bg-slate-800 text-[#ff2a2a] border-white/10' : 'bg-white/90 text-[#ff2a2a] border-transparent'}`}>
-          <div className="h-1.5 w-1.5 bg-[#ff2a2a] rounded-full animate-ping" />
-          <div className="h-1.5 w-1.5 bg-[#ff2a2a] rounded-full animate-ping delay-75" />
-          <div className="h-1.5 w-1.5 bg-[#ff2a2a] rounded-full animate-ping delay-150" />
-          Matrica is thinking...
+        {loading && <div className={`mr-auto max-w-[85%] rounded-xl rounded-bl-none p-3 text-sm font-bold uppercase tracking-wider border shadow-sm flex items-center gap-3 transition-all duration-700 ease-in-out ${isDarkMode ? 'bg-slate-800 text-[#ff2a2a] border-white/10' : 'bg-white/90 text-[#ff2a2a] border-transparent'}`}>
+          <div className="flex items-center gap-2 animate-pulse">
+            <div className="h-1.5 w-1.5 bg-[#ff2a2a] rounded-full animate-ping" />
+            <div className="h-1.5 w-1.5 bg-[#ff2a2a] rounded-full animate-ping delay-75" />
+            <div className="h-1.5 w-1.5 bg-[#ff2a2a] rounded-full animate-ping delay-150" />
+            Matrica is thinking...
+          </div>
+          <button onClick={handleStop} className="ml-2 p-1.5 rounded bg-[#ff2a2a]/20 border border-[#ff2a2a]/50 text-[#ff2a2a] hover:bg-[#ff2a2a] hover:text-white transition-colors flex items-center gap-1 shadow-sm" title="Stop Generation">
+            <Square size={12} className="fill-current" />
+            <span className="text-[10px] font-black">STOP</span>
+          </button>
         </div>}
       </div>
       

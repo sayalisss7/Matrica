@@ -20,6 +20,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+import redis
+import json
+from langchain.globals import set_llm_cache
+from langchain_community.cache import RedisCache
+
+# Connect to Redis
+REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
+try:
+    redis_client = redis.Redis.from_url(REDIS_URL, decode_responses=True)
+    # Set LangChain Global Cache to use Redis
+    set_llm_cache(RedisCache(redis_ = redis.Redis.from_url(REDIS_URL)))
+except Exception as e:
+    print(f"Failed to connect to Redis: {e}")
+    redis_client = None
+
 class ChatRequest(BaseModel):
     query: str
 
@@ -33,10 +48,23 @@ def read_root():
 
 @app.post("/api/chat", response_model=ChatResponse)
 def chat_endpoint(request: ChatRequest):
-    # Pass the query to our LangChain Task Router
+    cache_key = f"chat_cache:{request.query.strip().lower()}"
+    
+    # 1. Check Redis Cache for exact match
+    if redis_client:
+        cached_response = redis_client.get(cache_key)
+        if cached_response:
+            return ChatResponse(**json.loads(cached_response))
+    
+    # 2. Pass the query to our LangChain Task Router
     result = handle_query(request.query)
-    return ChatResponse(answer=result.get("answer"), context_used=result.get("context_used", []))
-
+    response = ChatResponse(answer=result.get("answer"), context_used=result.get("context_used", []))
+    
+    # 3. Store the result in Redis for 24 hours (86400 seconds)
+    if redis_client:
+        redis_client.setex(cache_key, 86400, json.dumps(response.dict()))
+        
+    return response
 # Additional endpoints for dashboard data
 @app.get("/api/dashboard/recommendations")
 def get_dashboard_recommendations():
