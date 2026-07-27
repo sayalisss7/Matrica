@@ -409,8 +409,12 @@ const Sponsors = ({ isDarkMode }: ThemeProps) => {
   )
 }
 
-const Chat = ({ isDarkMode }: ThemeProps) => {
-  const [messages, setMessages] = useState<{role: string, content: string}[]>([])
+type ChatProps = ThemeProps & {
+  messages: {role: string, content: string}[];
+  setMessages: React.Dispatch<React.SetStateAction<{role: string, content: string}[]>>;
+};
+
+const Chat = ({ isDarkMode, messages, setMessages }: ChatProps) => {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -470,7 +474,7 @@ const Chat = ({ isDarkMode }: ThemeProps) => {
             }`}
           >
             {m.role === 'ai' ? (
-              <div className="markdown-body">
+              <div className={`prose ${isDarkMode ? 'prose-invert' : ''} prose-sm max-w-none prose-p:leading-relaxed prose-li:my-0`}>
                 <ReactMarkdown>{m.content}</ReactMarkdown>
               </div>
             ) : (
@@ -482,7 +486,7 @@ const Chat = ({ isDarkMode }: ThemeProps) => {
           <div className="h-1.5 w-1.5 bg-[#ff2a2a] rounded-full animate-ping" />
           <div className="h-1.5 w-1.5 bg-[#ff2a2a] rounded-full animate-ping delay-75" />
           <div className="h-1.5 w-1.5 bg-[#ff2a2a] rounded-full animate-ping delay-150" />
-          Processing...
+          Matrica is thinking...
         </div>}
       </div>
       
@@ -509,6 +513,7 @@ const Chat = ({ isDarkMode }: ThemeProps) => {
 
 function App() {
   const [isDarkMode, setIsDarkMode] = useState(true)
+  const [chatMessages, setChatMessages] = useState<{role: string, content: string}[]>([])
 
   const appShellClass = isDarkMode ? 'bg-[#0d0d12] text-white' : 'bg-slate-100 text-slate-900'
   const sidebarClass = isDarkMode ? 'border-white/10 bg-black/80 backdrop-blur-xl' : 'border-transparent bg-white/40 backdrop-blur-xl'
@@ -624,7 +629,7 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage isDarkMode={isDarkMode} />} />
           <Route path="/sponsors" element={<Sponsors isDarkMode={isDarkMode} />} />
-          <Route path="/chat" element={<Chat isDarkMode={isDarkMode} />} />
+          <Route path="/chat" element={<Chat isDarkMode={isDarkMode} messages={chatMessages} setMessages={setChatMessages} />} />
         </Routes>
       </main>
     </div>

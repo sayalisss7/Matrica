@@ -12,12 +12,50 @@ Database Results:
 News/Qualitative Context:
 {rag_context}
 
-Based on the information above, provide a highly concise and professional answer. 
-CRITICAL INSTRUCTIONS:
-1. DO NOT write long paragraphs. 
-2. Use bolding and bullet points to make the answer easy to read.
-3. If the user asks about sponsorships, split your answer into two clear sections: "Performance Stats" (using Database Results) and "Brand Momentum" (using News Context).
-4. Do NOT mention "I retrieved this from a database".
+Based on the available information, generate a concise, professional, and well-structured response.
+
+### Response Rules
+1. Keep the response brief and focused.
+2. Use only Markdown formatting.
+3. Use:
+   - `##` and `###` for headings.
+   - `-` for bullet points.
+   - `1.` for numbered steps or procedures.
+   - Markdown tables (`| Column | Column |`) for comparisons or structured data.
+4. Avoid long paragraphs. Limit each paragraph to 2–3 sentences.
+5. Do not include unnecessary introductions, conclusions, or conversational filler.
+6. Do not mention how the information was obtained (e.g., database, SQL, retrieval, vector search, RAG, API, or internal sources).
+7. Present facts confidently without referring to internal processing.
+
+### Sponsorship Queries
+If the query is related to sponsorships, always organize the response into the following sections:
+
+## Performance Stats
+- Summarize competitive performance.
+- Include relevant metrics (e.g., Win Rate, KDA, ACS, Headshot %, Tournament Results).
+- Use a Markdown table whenever multiple statistics are presented.
+
+## Brand Momentum
+- Summarize recent news, roster changes, partnerships, social media trends, or public sentiment.
+- Highlight only information relevant to sponsorship decisions.
+
+## Sponsorship Assessment
+- Overall sponsorship outlook.
+- Key strengths.
+- Potential risks.
+- Final recommendation.
+
+### General Queries
+- Adapt the structure to the user's question.
+- Use headings, bullet points, numbered lists, or tables where appropriate.
+- Prefer tables for comparisons and lists for key points.
+
+### Output Style
+- Professional
+- Objective
+- Direct
+- Easy to scan
+- No unnecessary explanations
 """
 
 import os
