@@ -248,6 +248,14 @@ const Sponsors = ({ isDarkMode }: ThemeProps) => {
   const [results, setResults] = useState<any>(null)
   const [error, setError] = useState('')
 
+  let normPop = 0, normRep = 0, normSkill = 0;
+  const totalWeight = popWeight + repWeight + skillWeight;
+  if (totalWeight > 0) {
+    normPop = Math.round((popWeight / totalWeight) * 100);
+    normRep = Math.round((repWeight / totalWeight) * 100);
+    normSkill = 100 - normPop - normRep;
+  }
+
   const pageText = isDarkMode ? 'text-white' : 'text-black drop-shadow-md'
   const mutedText = isDarkMode ? 'text-slate-400' : 'text-slate-900 font-bold'
   
@@ -345,7 +353,7 @@ const Sponsors = ({ isDarkMode }: ThemeProps) => {
           <div>
             <div className="flex justify-between mb-1">
               <label className={`text-[10px] font-bold uppercase tracking-wider transition-colors duration-700 ${isDarkMode ? 'text-slate-300' : 'text-slate-900 drop-shadow-sm'}`}>YouTube Popularity</label>
-              <span className="text-[#ff2a2a] font-extrabold text-xs brand-font drop-shadow-sm">{popWeight}%</span>
+              <span className="text-[#ff2a2a] font-extrabold text-xs brand-font drop-shadow-sm">{normPop}%</span>
             </div>
             <input type="range" min="0" max="100" value={popWeight} onChange={(e) => setPopWeight(Number(e.target.value))} className={`transition-all duration-700 ${sliderClass}`} />
           </div>
@@ -353,7 +361,7 @@ const Sponsors = ({ isDarkMode }: ThemeProps) => {
           <div>
             <div className="flex justify-between mb-1">
               <label className={`text-[10px] font-bold uppercase tracking-wider transition-colors duration-700 ${isDarkMode ? 'text-slate-300' : 'text-slate-900 drop-shadow-sm'}`}>Brand Reputation</label>
-              <span className="text-[#ff2a2a] font-extrabold text-xs brand-font drop-shadow-sm">{repWeight}%</span>
+              <span className="text-[#ff2a2a] font-extrabold text-xs brand-font drop-shadow-sm">{normRep}%</span>
             </div>
             <input type="range" min="0" max="100" value={repWeight} onChange={(e) => setRepWeight(Number(e.target.value))} className={`transition-all duration-700 ${sliderClass}`} />
           </div>
@@ -361,7 +369,7 @@ const Sponsors = ({ isDarkMode }: ThemeProps) => {
           <div>
             <div className="flex justify-between mb-1">
               <label className={`text-[10px] font-bold uppercase tracking-wider transition-colors duration-700 ${isDarkMode ? 'text-slate-300' : 'text-slate-900 drop-shadow-sm'}`}>In-Game Skill</label>
-              <span className="text-[#ff2a2a] font-extrabold text-xs brand-font drop-shadow-sm">{skillWeight}%</span>
+              <span className="text-[#ff2a2a] font-extrabold text-xs brand-font drop-shadow-sm">{normSkill}%</span>
             </div>
             <input type="range" min="0" max="100" value={skillWeight} onChange={(e) => setSkillWeight(Number(e.target.value))} className={`transition-all duration-700 ${sliderClass}`} />
           </div>

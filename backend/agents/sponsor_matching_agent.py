@@ -24,28 +24,36 @@ def get_ranked_players(budget, pop_w, rep_w, skill_w):
     try:
         with engine.connect() as conn:
             # Join dim_players with fact_player_stats to get overall rating (skill)
-            # Since VCT real data doesn't have popularity, reputation, or budget, we dynamically
-            # simulate them consistently based on the player's name hash!
+            # Join dim_player_popularity to get real popularity and reputation
             query = text("""
                 SELECT 
                     p.player as "Player_Name", 
-                    (ABS(hashtext(p.player)) % 50) + 50 as popularity_score, 
-                    (ABS(hashtext(p.player)) % 40) + 60 as reputation_score, 
+                    pop.popularity as popularity_score, 
+                    pop.reputation as reputation_score, 
                     (ABS(hashtext(p.player)) % 40000) + 10000 as estimated_budget,
                     AVG(f.rating) as avg_rating
                 FROM dim_players p
                 LEFT JOIN fact_player_stats f ON p.player_id = f.player_id
+                LEFT JOIN dim_player_popularity pop ON LOWER(pop.player_name) = LOWER(p.player)
                 WHERE (ABS(hashtext(p.player)) % 40000) + 10000 <= :budget
-                GROUP BY p.player
+                GROUP BY p.player, pop.popularity, pop.reputation
             """)
             
             result = conn.execute(query, {"budget": budget})
             
+            seen_players = set()
             ranked_players = []
             for row in result:
                 name = row[0]
-                pop = row[1] or 50.0 
-                rep = row[2] or 50.0
+                
+                # Deduplicate players like f0rsaken and f0rsakeN
+                if name.lower() in seen_players:
+                    continue
+                seen_players.add(name.lower())
+                
+                # If player is not in the CSV, fallback to 50
+                pop = row[1] if row[1] is not None else 50.0
+                rep = row[2] if row[2] is not None else 50.0
                 cost = row[3] or budget
                 skill = (row[4] or 1.0) * 50.0  # Convert 1.0 rating to 50 scale roughly
                 
@@ -64,7 +72,7 @@ def get_ranked_players(budget, pop_w, rep_w, skill_w):
                 })
                 
             # Sort by highest score
-            ranked_players = sorted(ranked_players, key=lambda x: x['score'], reverse=True)[:3]
+            ranked_players = sorted(ranked_players, key=lambda x: x['score'], reverse=True)[:6]
             
             if not ranked_players:
                 raise Exception("Empty Database")

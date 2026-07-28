@@ -187,11 +187,9 @@ def get_dashboard_stats(category: str = "kills"):
                     LIMIT 10
                 """
             elif category == "popularity":
-                # Simulated based on player name hash
                 query_str = """
-                    SELECT p.player, ((ABS(hashtext(p.player)) % 100) + 1) as val
-                    FROM dim_players p
-                    GROUP BY p.player
+                    SELECT player_name as player, popularity as val
+                    FROM dim_player_popularity
                     ORDER BY val DESC
                     LIMIT 10
                 """
