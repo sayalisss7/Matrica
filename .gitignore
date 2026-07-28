@@ -19,7 +19,6 @@ chromadb/
 # Node & Frontend
 node_modules/
 frontend/node_modules/
-frontend/dist/
 .DS_Store
 
 # Data (Optional: uncomment to ignore large data files if pushing to GitHub)
