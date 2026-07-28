@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Activity, Target, TrendingUp, Users, Star, BarChart3, Crosshair, Zap, ShieldAlert, Award } from 'lucide-react';
+import { Activity, Target, Users, Star, BarChart3, Crosshair, Zap, ShieldAlert, Award } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import horizBg from './assets/horiz.jpg';
+import Footer from './Footer';
 
 type ThemeProps = {
   isDarkMode: boolean;
@@ -14,9 +15,9 @@ type PerspectiveType = 'performance' | 'brand' | 'mastery';
 // Define categories per perspective
 const CATEGORIES: Record<PerspectiveType, any[]> = {
   performance: [
-    { id: 'kills', label: 'Top Kills', icon: <Target size={16} />, color: '#ff2a2a' },
+    { id: 'kills', label: 'Top Kills', icon: <Target size={16} />, color: '#ec4899' },
     { id: 'kd', label: 'Top K/D Ratio', icon: <Activity size={16} />, color: '#3b82f6' },
-    { id: 'acs', label: 'Highest ACS', icon: <BarChart3 size={16} />, color: '#a855f7' },
+    { id: 'acs', label: 'Highest ACS', icon: <BarChart3 size={16} />, color: '#8b5cf6' },
     { id: 'hs', label: 'Headshot %', icon: <Crosshair size={16} />, color: '#ec4899' },
   ],
   brand: [
@@ -45,7 +46,7 @@ export default function Dashboard({ isDarkMode }: ThemeProps) {
 
   useEffect(() => {
     setLoading(true);
-    axios.get(`${import.meta.env.VITE_API_URL || 'https://matrica-backend.jollyplant-fd7887aa.centralindia.azurecontainerapps.io'}/api/dashboard/stats?category=${activeCategory.id}`)
+    axios.get(`http://localhost:8000/api/dashboard/stats?category=${activeCategory.id}`)
       .then(res => {
         setData(res.data);
       })
@@ -53,18 +54,18 @@ export default function Dashboard({ isDarkMode }: ThemeProps) {
       .finally(() => setLoading(false));
   }, [activeCategory]);
 
-  const pageText = isDarkMode ? 'text-white' : 'text-slate-900 drop-shadow-sm';
-  const mutedText = isDarkMode ? 'text-slate-400' : 'text-slate-600 font-bold';
+  const pageText = isDarkMode ? 'text-white' : 'text-slate-950 font-black';
+  const mutedText = isDarkMode ? 'text-slate-400' : 'text-slate-900 font-extrabold';
   const cardClass = isDarkMode
     ? 'border border-white/10 bg-black/45 shadow-[0_0_20px_rgba(0,0,0,0.32)] backdrop-blur-md'
-    : 'border border-slate-200 bg-white/60 shadow-lg backdrop-blur-xl';
+    : 'border border-slate-300 bg-white/95 shadow-xl backdrop-blur-xl';
 
   return (
-    <div className="p-4 md:p-6 h-full overflow-y-auto page-enter">
-      <div className="flex flex-col max-w-6xl mx-auto space-y-6">
+    <div className="h-full overflow-y-auto page-enter flex flex-col justify-between">
+      <div className="p-4 md:p-6 flex flex-col max-w-6xl mx-auto space-y-6 w-full">
         
         {/* Header */}
-        <div className={`relative rounded-2xl overflow-hidden transition-all duration-700 ease-in-out ${isDarkMode ? 'border border-[#ff2a2a]/20 shadow-lg' : 'border-none shadow-md'} shrink-0`}>
+        <div className={`relative rounded-2xl overflow-hidden transition-all duration-700 ease-in-out ${isDarkMode ? 'border border-[#00e5ff]/30 shadow-lg' : 'border-none shadow-md'} shrink-0`}>
           <div
             className={`absolute inset-0 bg-cover bg-[center_top] bg-no-repeat transition-all duration-700 ease-in-out ${isDarkMode ? 'opacity-50 mix-blend-screen' : 'opacity-80'}`}
             style={{ backgroundImage: `url('${horizBg}')` }}
@@ -74,8 +75,8 @@ export default function Dashboard({ isDarkMode }: ThemeProps) {
           <div className="relative z-10 p-6 md:p-8 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
             <div>
               <h1 className={`text-3xl font-extrabold uppercase tracking-wide flex items-center gap-3 transition-colors duration-700 ${pageText}`}>
-                <Award size={28} style={{ color: activeCategory.color }} className="transition-colors duration-500" />
-                Sponsor <span style={{ color: activeCategory.color }} className="transition-colors duration-500 drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]">Analytics</span>
+                <Award size={28} style={{ color: isDarkMode ? activeCategory.color : '#1d4ed8' }} className="transition-colors duration-500" />
+                Sponsor <span style={{ color: isDarkMode ? activeCategory.color : '#1d4ed8' }} className={`transition-colors duration-500 ${isDarkMode ? 'drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]' : 'font-black'}`}>Analytics</span>
               </h1>
               <p className={`text-sm mt-2 transition-colors duration-700 ${mutedText} ml-[40px] uppercase tracking-wider`}>
                 Player telemetry structured for targeted sponsor campaigns.
@@ -88,7 +89,7 @@ export default function Dashboard({ isDarkMode }: ThemeProps) {
                 onClick={() => setActivePerspective('performance')}
                 className={`px-4 md:px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all duration-300 ${
                   activePerspective === 'performance'
-                    ? 'bg-[#ff2a2a] text-white shadow-[0_0_15px_rgba(255,42,42,0.6)]'
+                    ? 'bg-[#ec4899] text-white font-extrabold shadow-[0_0_15px_rgba(236,72,153,0.6)]'
                     : isDarkMode
                       ? 'text-slate-400 hover:text-white hover:bg-white/5'
                       : 'text-slate-600 hover:text-black hover:bg-black/5'
@@ -173,7 +174,7 @@ export default function Dashboard({ isDarkMode }: ThemeProps) {
                     }}
                   />
                   <Bar dataKey="value" radius={[6, 6, 0, 0]} animationDuration={1000}>
-                    {data.map((entry: any, index: number) => (
+                    {data.map((_, index: number) => (
                       <Cell key={`cell-${index}`} fill={activeCategory.color} className="transition-all duration-500 hover:opacity-80 cursor-pointer" />
                     ))}
                   </Bar>
@@ -197,7 +198,7 @@ export default function Dashboard({ isDarkMode }: ThemeProps) {
                 >
                   <div className="flex items-center gap-3">
                     <div 
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black text-white"
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black text-black"
                       style={{ backgroundColor: activeCategory.color }}
                     >
                       {idx + 1}
@@ -216,9 +217,9 @@ export default function Dashboard({ isDarkMode }: ThemeProps) {
               )}
             </div>
           </div>
-
         </div>
       </div>
+      <Footer isDarkMode={isDarkMode} />
     </div>
   );
 }

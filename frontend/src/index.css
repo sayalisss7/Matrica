@@ -5,7 +5,9 @@
 @tailwind utilities;
 
 :root {
-  --mystic-red: #ff2a2a; 
+  --mystic-red: #00e5ff;
+  --cyber-cyan: #00e5ff;
+  --cyber-emerald: #00ff88;
 }
 
 body, html {
@@ -13,7 +15,7 @@ body, html {
   padding: 0;
   height: 100%;
   font-family: 'Rajdhani', sans-serif;
-  background-color: #0d0d12;
+  background-color: #080a10;
 }
 
 .brand-font {
@@ -29,13 +31,17 @@ body, html {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--mystic-red);
+  background: var(--cyber-cyan);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #ff5555;
-  box-shadow: 0 0 10px var(--mystic-red);
+  background: #33ebff;
+  box-shadow: 0 0 10px var(--cyber-cyan);
+}
+
+.light-accent-border {
+  font-weight: 900 !important;
 }
 
 .page-enter {
@@ -71,4 +77,64 @@ body, html {
   opacity: 0.1; 
 }
 
+@keyframes smoothFloatZoom {
+  0%, 100% {
+    transform: scale(0.96) translateY(0px) rotate(0deg);
+    filter: drop-shadow(0 10px 20px rgba(0, 229, 255, 0.3));
+  }
+  50% {
+    transform: scale(1.05) translateY(-8px) rotate(-1deg);
+    filter: drop-shadow(0 18px 32px rgba(0, 255, 136, 0.5));
+  }
+}
 
+.animate-smooth-zoom {
+  animation: smoothFloatZoom 6s ease-in-out infinite;
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.4s ease;
+}
+
+.animate-smooth-zoom:hover {
+  transform: scale(1.1) translateY(-6px) rotate(0deg) !important;
+  filter: drop-shadow(0 22px 38px rgba(0, 229, 255, 0.7));
+}
+
+@keyframes logoCyberFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg) scale(1);
+    filter: drop-shadow(0 0 10px rgba(0, 229, 255, 0.7)) drop-shadow(0 0 20px rgba(0, 255, 136, 0.3));
+  }
+  50% {
+    transform: translateY(-4px) rotate(6deg) scale(1.1);
+    filter: drop-shadow(0 0 18px rgba(0, 229, 255, 1)) drop-shadow(0 0 30px rgba(0, 255, 136, 0.6));
+  }
+}
+
+.animate-logo-glow {
+  animation: logoCyberFloat 4s ease-in-out infinite;
+  will-change: transform, filter;
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.3s ease;
+}
+
+.animate-logo-glow:hover {
+  transform: rotate(18deg) scale(1.2) !important;
+  filter: drop-shadow(0 0 25px rgba(0, 229, 255, 1)) drop-shadow(0 0 40px rgba(0, 255, 136, 0.95));
+}
+
+@keyframes titleCyberShimmer {
+  0%, 100% {
+    text-shadow: 0 0 10px rgba(0, 229, 255, 0.5), 0 0 3px rgba(0, 255, 136, 0.4);
+  }
+  50% {
+    text-shadow: 0 0 22px rgba(0, 229, 255, 1), 0 0 8px rgba(0, 255, 136, 0.8);
+  }
+}
+
+.animate-title-glow {
+  animation: titleCyberShimmer 3s ease-in-out infinite;
+  transition: all 0.5s ease;
+}
+
+.animate-title-glow:hover {
+  letter-spacing: 0.3em !important;
+  text-shadow: 0 0 30px rgba(0, 229, 255, 1), 0 0 15px rgba(0, 255, 136, 1);
+}

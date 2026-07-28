@@ -7,9 +7,6 @@ import { BrowserRouter } from 'react-router-dom'
 
 
 
-import logoImage from './assets/1.png'
-import backgroundImage from './assets/2.jpg'
-
 const queryClient = new QueryClient()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
