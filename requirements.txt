@@ -3,6 +3,8 @@ uvicorn
 pydantic
 pydantic-settings
 langchain
+langchain-core
+langchain-text-splitters
 langchain-groq
 langchain-community
 langchain-chroma

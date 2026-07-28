@@ -3,6 +3,8 @@ import { Routes, Route, NavLink } from 'react-router-dom'
 import { Home, MessageSquare, BarChart2, Moon, Sun, Sparkles, Cpu, Crosshair, ArrowRight, TrendingUp, Users, Activity, XCircle, Edit2, Square, Check, X } from 'lucide-react'
 import axios from 'axios'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import Dashboard from './Dashboard'
 
 
 import matricaLogo from './assets/matrica-logo.png'
@@ -448,13 +450,13 @@ const Chat = ({ isDarkMode, messages, setMessages }: ChatProps) => {
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [editInput, setEditInput] = useState('')
 
-  const handleSend = async (overrideInput?: string) => {
+  const handleSend = async (overrideInput?: string, skipPush?: boolean) => {
     const textToSend = overrideInput !== undefined ? overrideInput : input
     if (!textToSend.trim()) return
     
-    if (overrideInput === undefined) {
+    if (!skipPush) {
       setMessages(prev => [...prev, { role: 'user', content: textToSend }])
-      setInput('')
+      if (overrideInput === undefined) setInput('')
     }
     setLoading(true)
     
@@ -500,7 +502,7 @@ const Chat = ({ isDarkMode, messages, setMessages }: ChatProps) => {
     updatedMessages.push({ role: 'user', content: editInput })
     setMessages(updatedMessages)
     setEditingIndex(null)
-    handleSend(editInput)
+    handleSend(editInput, true)
   }
 
   return (
@@ -568,8 +570,8 @@ const Chat = ({ isDarkMode, messages, setMessages }: ChatProps) => {
             }`}
           >
             {m.role === 'ai' ? (
-              <div className={`prose ${isDarkMode ? 'prose-invert' : ''} prose-sm max-w-none prose-p:leading-relaxed prose-li:my-0`}>
-                <ReactMarkdown>{m.content}</ReactMarkdown>
+              <div className={`prose ${isDarkMode ? 'prose-invert' : ''} prose-sm max-w-none prose-p:leading-relaxed prose-li:my-0 prose-table:border prose-table:border-white/10 prose-th:bg-black/20 prose-th:p-2 prose-td:p-2`}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
               </div>
             ) : editingIndex === i ? (
               <div className="flex flex-col gap-2 min-w-[250px] sm:min-w-[400px]">
@@ -605,10 +607,6 @@ const Chat = ({ isDarkMode, messages, setMessages }: ChatProps) => {
             <div className="h-1.5 w-1.5 bg-[#ff2a2a] rounded-full animate-ping delay-150" />
             Matrica is thinking...
           </div>
-          <button onClick={handleStop} className="ml-2 p-1.5 rounded bg-[#ff2a2a]/20 border border-[#ff2a2a]/50 text-[#ff2a2a] hover:bg-[#ff2a2a] hover:text-white transition-colors flex items-center gap-1 shadow-sm" title="Stop Generation">
-            <Square size={12} className="fill-current" />
-            <span className="text-[10px] font-black">STOP</span>
-          </button>
         </div>}
       </div>
       
@@ -622,12 +620,22 @@ const Chat = ({ isDarkMode, messages, setMessages }: ChatProps) => {
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleSend()}
         />
-        <button 
-          onClick={handleSend}
-          className={`absolute right-4 top-1/2 -translate-y-1/2 text-[#ff2a2a] transition-all duration-500 ${isDarkMode ? 'hover:text-white' : 'hover:text-black'} hover:drop-shadow-[0_0_10px_#ff2a2a]`}
-        >
-          <ArrowRight size={20} />
-        </button>
+        {loading ? (
+          <button 
+            onClick={handleStop}
+            className={`absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-[#ff2a2a] transition-all duration-500 hover:scale-110`}
+            title="Stop Generation"
+          >
+            <Square size={20} className="fill-current" />
+          </button>
+        ) : (
+          <button 
+            onClick={() => handleSend()}
+            className={`absolute right-4 top-1/2 -translate-y-1/2 text-[#ff2a2a] transition-all duration-500 ${isDarkMode ? 'hover:text-white' : 'hover:text-black'} hover:drop-shadow-[0_0_10px_#ff2a2a]`}
+          >
+            <ArrowRight size={20} />
+          </button>
+        )}
       </div>
     </div>
   )
@@ -701,6 +709,12 @@ function App() {
                 <span>Sponsors</span>
               </span>
             </NavLink>
+            <NavLink to="/dashboard" className={navItemClass}>
+              <span className="relative z-10 flex items-center gap-3">
+                <Activity size={18} className="text-current transition-colors duration-700" />
+                <span>Dashboard</span>
+              </span>
+            </NavLink>
             <NavLink to="/chat" className={navItemClass}>
               <span className="relative z-10 flex items-center gap-3">
                 <MessageSquare size={18} className="text-current transition-colors duration-700" />
@@ -751,6 +765,7 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage isDarkMode={isDarkMode} />} />
           <Route path="/sponsors" element={<Sponsors isDarkMode={isDarkMode} />} />
+          <Route path="/dashboard" element={<Dashboard isDarkMode={isDarkMode} />} />
           <Route path="/chat" element={<Chat isDarkMode={isDarkMode} messages={chatMessages} setMessages={setChatMessages} />} />
         </Routes>
       </main>
