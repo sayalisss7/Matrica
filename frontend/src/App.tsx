@@ -77,7 +77,7 @@ const HomePage = ({ isDarkMode }: ThemeProps) => {
   ]);
 
   useEffect(() => {
-    axios.get('http://localhost:8000/api/dashboard/recommendations')
+    axios.get('https://matrica-backend.jollyplant-fd7887aa.centralindia.azurecontainerapps.io/api/dashboard/recommendations')
       .then(res => {
           if(res.data && res.data.length > 0) {
              // Map data to include dummy trends if not provided
@@ -307,7 +307,7 @@ const Sponsors = ({ isDarkMode }: ThemeProps) => {
     setLoading(true)
     setError('')
     try {
-      const res = await axios.post('http://localhost:8000/api/match_sponsor', {
+      const res = await axios.post('https://matrica-backend.jollyplant-fd7887aa.centralindia.azurecontainerapps.io/api/match_sponsor', {
         budget: numBudget, popWeight, repWeight, skillWeight
       })
       setResults(res.data)
@@ -531,7 +531,7 @@ const Chat = ({ isDarkMode, messages, setMessages }: ChatProps) => {
     abortControllerRef.current = new AbortController()
     
     try {
-      const res = await axios.post('http://localhost:8000/api/chat', { query: textToSend }, {
+      const res = await axios.post('https://matrica-backend.jollyplant-fd7887aa.centralindia.azurecontainerapps.io/api/chat', { query: textToSend }, {
         signal: abortControllerRef.current.signal
       })
       setMessages(prev => [...prev, { role: 'ai', content: res.data.answer }])

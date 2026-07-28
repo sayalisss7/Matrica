@@ -46,7 +46,7 @@ export default function Dashboard({ isDarkMode }: ThemeProps) {
 
   useEffect(() => {
     setLoading(true);
-    axios.get(`http://localhost:8000/api/dashboard/stats?category=${activeCategory.id}`)
+    axios.get(`https://matrica-backend.jollyplant-fd7887aa.centralindia.azurecontainerapps.io/api/dashboard/stats?category=${activeCategory.id}`)
       .then(res => {
         setData(res.data);
       })
