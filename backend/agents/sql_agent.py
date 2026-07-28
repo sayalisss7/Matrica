@@ -34,7 +34,8 @@ def run_sql_query(query: str) -> str:
     if not agent:
         return "Database not found or not initialized."
     try:
-        response = agent.invoke({"input": query})
+        enhanced_query = f"INSTRUCTION: When filtering by string columns like tournament, map, or player names, ALWAYS use ILIKE '%...%' and extract just the most unique keyword (e.g. use '%Americas%' instead of '%VCT Americas%') to avoid empty results. User Query: {query}"
+        response = agent.invoke({"input": enhanced_query})
         return response.get("output", str(response))
     except Exception as e:
         return f"Error executing SQL query: {e}"
