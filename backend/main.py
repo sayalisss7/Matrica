@@ -111,9 +111,9 @@ def get_dashboard_recommendations():
 
 class MatchRequest(BaseModel):
     budget: float
-    popWeight: float
-    repWeight: float
-    skillWeight: float
+    popWeight: float = 100.0
+    repWeight: float = 100.0
+    skillWeight: float = 100.0
 
 @app.post("/api/match_sponsor")
 def match_sponsor_endpoint(request: MatchRequest):
