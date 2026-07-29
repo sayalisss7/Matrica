@@ -258,9 +258,9 @@ const HomePage = ({ isDarkMode }: ThemeProps) => {
 const Sponsors = ({ isDarkMode }: ThemeProps) => {
   const [budget, setBudget] = useState<string | number>(50000)
   const [showErrorPopup, setShowErrorPopup] = useState(false)
-  const [popWeight, setPopWeight] = useState(100)
-  const [repWeight, setRepWeight] = useState(100)
-  const [skillWeight, setSkillWeight] = useState(100)
+  const [popWeight, setPopWeight] = useState(34)
+  const [repWeight, setRepWeight] = useState(33)
+  const [skillWeight, setSkillWeight] = useState(33)
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState<any>(null)
   const [error, setError] = useState('')
@@ -299,9 +299,31 @@ const Sponsors = ({ isDarkMode }: ThemeProps) => {
   }
 
   const handleWeightChange = (changedIndex: number, newValue: number) => {
-    if (changedIndex === 0) setPopWeight(newValue);
-    if (changedIndex === 1) setRepWeight(newValue);
-    if (changedIndex === 2) setSkillWeight(newValue);
+    const values = [popWeight, repWeight, skillWeight];
+    const oldValue = values[changedIndex];
+    
+    if (newValue === oldValue) return;
+
+    let remaining = 100 - newValue;
+    const oldRemaining = 100 - oldValue;
+
+    let newValues = [...values];
+    newValues[changedIndex] = newValue;
+
+    const otherIndices = [0, 1, 2].filter(i => i !== changedIndex);
+
+    if (oldRemaining === 0) {
+      newValues[otherIndices[0]] = Math.round(remaining / 2);
+      newValues[otherIndices[1]] = remaining - newValues[otherIndices[0]];
+    } else {
+      const ratio = remaining / oldRemaining;
+      newValues[otherIndices[0]] = Math.round(values[otherIndices[0]] * ratio);
+      newValues[otherIndices[1]] = remaining - newValues[otherIndices[0]];
+    }
+
+    setPopWeight(newValues[0]);
+    setRepWeight(newValues[1]);
+    setSkillWeight(newValues[2]);
   }
 
   const runMatch = async () => {
