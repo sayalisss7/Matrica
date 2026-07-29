@@ -258,7 +258,7 @@ const HomePage = ({ isDarkMode }: ThemeProps) => {
 const Sponsors = ({ isDarkMode }: ThemeProps) => {
   const [budget, setBudget] = useState<string | number>(50000)
   const [showErrorPopup, setShowErrorPopup] = useState(false)
-  const [popWeight, setPopWeight] = useState(33)
+  const [popWeight, setPopWeight] = useState(34)
   const [repWeight, setRepWeight] = useState(33)
   const [skillWeight, setSkillWeight] = useState(33)
   const [loading, setLoading] = useState(false)
@@ -295,7 +295,35 @@ const Sponsors = ({ isDarkMode }: ThemeProps) => {
     if (type === 'energy') { setPopWeight(70); setRepWeight(20); setSkillWeight(10); }
     if (type === 'tech') { setPopWeight(20); setRepWeight(10); setSkillWeight(70); }
     if (type === 'apparel') { setPopWeight(40); setRepWeight(40); setSkillWeight(20); }
-    if (type === 'balanced') { setPopWeight(33); setRepWeight(33); setSkillWeight(33); }
+    if (type === 'balanced') { setPopWeight(34); setRepWeight(33); setSkillWeight(33); }
+  }
+
+  const handleWeightChange = (changedIndex: number, newValue: number) => {
+    const values = [popWeight, repWeight, skillWeight];
+    const oldValue = values[changedIndex];
+    
+    if (newValue === oldValue) return;
+
+    let remaining = 100 - newValue;
+    const oldRemaining = 100 - oldValue;
+
+    let newValues = [...values];
+    newValues[changedIndex] = newValue;
+
+    const otherIndices = [0, 1, 2].filter(i => i !== changedIndex);
+
+    if (oldRemaining === 0) {
+      newValues[otherIndices[0]] = Math.round(remaining / 2);
+      newValues[otherIndices[1]] = remaining - newValues[otherIndices[0]];
+    } else {
+      const ratio = remaining / oldRemaining;
+      newValues[otherIndices[0]] = Math.round(values[otherIndices[0]] * ratio);
+      newValues[otherIndices[1]] = remaining - newValues[otherIndices[0]];
+    }
+
+    setPopWeight(newValues[0]);
+    setRepWeight(newValues[1]);
+    setSkillWeight(newValues[2]);
   }
 
   const runMatch = async () => {
@@ -378,7 +406,7 @@ const Sponsors = ({ isDarkMode }: ThemeProps) => {
                 <label className={`text-[10px] font-bold uppercase tracking-wider transition-colors duration-700 ${isDarkMode ? 'text-slate-300' : 'text-slate-900 drop-shadow-sm'}`}>YouTube Popularity</label>
                 <span className={`font-extrabold text-xs brand-font drop-shadow-sm ${isDarkMode ? 'text-[#00e5ff]' : 'text-blue-700 font-black'}`}>{popWeight}%</span>
               </div>
-              <input type="range" min="0" max="100" value={popWeight} onChange={(e) => setPopWeight(Number(e.target.value))} className={`transition-all duration-700 ${sliderClass}`} />
+              <input type="range" min="0" max="100" value={popWeight} onChange={(e) => handleWeightChange(0, Number(e.target.value))} className={`transition-all duration-700 ${sliderClass}`} />
             </div>
 
             <div>
@@ -386,7 +414,7 @@ const Sponsors = ({ isDarkMode }: ThemeProps) => {
                 <label className={`text-[10px] font-bold uppercase tracking-wider transition-colors duration-700 ${isDarkMode ? 'text-slate-300' : 'text-slate-900 drop-shadow-sm'}`}>Brand Reputation</label>
                 <span className={`font-extrabold text-xs brand-font drop-shadow-sm ${isDarkMode ? 'text-[#00e5ff]' : 'text-blue-700 font-black'}`}>{repWeight}%</span>
               </div>
-              <input type="range" min="0" max="100" value={repWeight} onChange={(e) => setRepWeight(Number(e.target.value))} className={`transition-all duration-700 ${sliderClass}`} />
+              <input type="range" min="0" max="100" value={repWeight} onChange={(e) => handleWeightChange(1, Number(e.target.value))} className={`transition-all duration-700 ${sliderClass}`} />
             </div>
 
             <div>
@@ -394,7 +422,7 @@ const Sponsors = ({ isDarkMode }: ThemeProps) => {
                 <label className={`text-[10px] font-bold uppercase tracking-wider transition-colors duration-700 ${isDarkMode ? 'text-slate-300' : 'text-slate-900 drop-shadow-sm'}`}>In-Game Skill</label>
                 <span className={`font-extrabold text-xs brand-font drop-shadow-sm ${isDarkMode ? 'text-[#00e5ff]' : 'text-blue-700 font-black'}`}>{skillWeight}%</span>
               </div>
-              <input type="range" min="0" max="100" value={skillWeight} onChange={(e) => setSkillWeight(Number(e.target.value))} className={`transition-all duration-700 ${sliderClass}`} />
+              <input type="range" min="0" max="100" value={skillWeight} onChange={(e) => handleWeightChange(2, Number(e.target.value))} className={`transition-all duration-700 ${sliderClass}`} />
             </div>
           </div>
         </div>
