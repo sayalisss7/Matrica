@@ -156,7 +156,7 @@ def get_dashboard_stats(category: str = "kills"):
                     FROM dim_players p
                     JOIN fact_player_stats f ON p.player_id = f.player_id
                     GROUP BY p.player
-                    ORDER BY val DESC
+                    ORDER BY val DESC NULLS LAST
                     LIMIT 10
                 """
             elif category == "kd":
@@ -165,7 +165,7 @@ def get_dashboard_stats(category: str = "kills"):
                     FROM dim_players p
                     JOIN fact_player_stats f ON p.player_id = f.player_id
                     GROUP BY p.player
-                    ORDER BY val DESC
+                    ORDER BY val DESC NULLS LAST
                     LIMIT 10
                 """
             elif category == "acs":
@@ -174,7 +174,7 @@ def get_dashboard_stats(category: str = "kills"):
                     FROM dim_players p
                     JOIN fact_player_stats f ON p.player_id = f.player_id
                     GROUP BY p.player
-                    ORDER BY val DESC
+                    ORDER BY val DESC NULLS LAST
                     LIMIT 10
                 """
             elif category == "hs":
@@ -183,14 +183,14 @@ def get_dashboard_stats(category: str = "kills"):
                     FROM dim_players p
                     JOIN fact_player_stats f ON p.player_id = f.player_id
                     GROUP BY p.player
-                    ORDER BY val DESC
+                    ORDER BY val DESC NULLS LAST
                     LIMIT 10
                 """
             elif category == "popularity":
                 query_str = """
                     SELECT player_name as player, popularity as val
                     FROM dim_player_popularity
-                    ORDER BY val DESC
+                    ORDER BY val DESC NULLS LAST
                     LIMIT 10
                 """
             elif category == "score":
@@ -199,7 +199,7 @@ def get_dashboard_stats(category: str = "kills"):
                     FROM dim_players p
                     JOIN fact_player_stats f ON p.player_id = f.player_id
                     GROUP BY p.player
-                    ORDER BY val DESC
+                    ORDER BY val DESC NULLS LAST
                     LIMIT 10
                 """
             elif category == "first_kills":
@@ -208,7 +208,7 @@ def get_dashboard_stats(category: str = "kills"):
                     FROM dim_players p
                     JOIN fact_player_stats f ON p.player_id = f.player_id
                     GROUP BY p.player
-                    ORDER BY val DESC
+                    ORDER BY val DESC NULLS LAST
                     LIMIT 10
                 """
             elif category.startswith("agent_"):
@@ -219,7 +219,7 @@ def get_dashboard_stats(category: str = "kills"):
                     JOIN fact_player_stats f ON p.player_id = f.player_id
                     WHERE f.agents LIKE '%{agent_name}%'
                     GROUP BY p.player
-                    ORDER BY val DESC
+                    ORDER BY val DESC NULLS LAST
                     LIMIT 10
                 """
             else:
