@@ -60,12 +60,12 @@ export default function IntroScreen({ onEnter, isDarkMode }: IntroScreenProps) {
         <div className="flex items-center gap-3">
           <img
             src={matricaLogo}
-            alt="MATRIKA Logo"
+            alt="MATRICA Logo"
             className="h-10 w-10 object-contain drop-shadow-[0_0_15px_rgba(0,229,255,0.8)] animate-logo-glow"
           />
           <div className="flex flex-col">
             <span className="brand-font text-2xl font-black tracking-[0.25em] text-white drop-shadow-[0_0_10px_rgba(0,229,255,0.6)]">
-              MATRIKA
+              MATRICA
             </span>
             <span className="text-[9px] font-black uppercase tracking-widest text-[#00e5ff]">
               Esports Intelligence
@@ -90,7 +90,7 @@ export default function IntroScreen({ onEnter, isDarkMode }: IntroScreenProps) {
               ESPORTS GENERATION
             </h1>
             <h2 className="mt-[-0.3em] text-4xl sm:text-6xl md:text-8xl lg:text-[8rem] font-black uppercase tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#00e5ff]/30 via-white/20 to-[#00ff88]/30 select-none leading-none drop-shadow-[0_0_40px_rgba(0,229,255,0.3)]">
-              eSports MATRIKA
+              eSports MATRICA
             </h2>
           </div>
         </div>
@@ -139,7 +139,7 @@ export default function IntroScreen({ onEnter, isDarkMode }: IntroScreenProps) {
             </div>
           </div>
 
-          {/* Glowing CTA Button: Let's dive into Matrika */}
+          {/* Glowing CTA Button: Let's dive into Matrica */}
           <div className="mt-8 z-40">
             <button
               onClick={handleEnter}
@@ -147,7 +147,7 @@ export default function IntroScreen({ onEnter, isDarkMode }: IntroScreenProps) {
               className="group relative inline-flex items-center gap-3 px-8 sm:px-12 py-4 sm:py-5 rounded-2xl bg-gradient-to-r from-[#00e5ff] via-[#00ff88] to-[#00e5ff] bg-[length:200%_100%] animate-gradient text-black font-black text-base sm:text-lg uppercase tracking-[0.2em] shadow-[0_0_35px_rgba(0,229,255,0.8)] hover:shadow-[0_0_60px_rgba(0,255,136,1)] hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer"
             >
               <Sparkles className="animate-spin-slow text-black" size={22} />
-              <span>Let's dive into Matrika</span>
+              <span>Let's dive into Matrica</span>
               <ArrowRight className="group-hover:translate-x-2 transition-transform duration-300 text-black" size={22} />
             </button>
           </div>

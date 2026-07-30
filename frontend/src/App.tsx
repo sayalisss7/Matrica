@@ -115,7 +115,7 @@ const HomePage = ({ isDarkMode }: ThemeProps) => {
                   : 'bg-blue-600/15 border border-blue-600/50 text-blue-900'
               }`}>
                 <Sparkles size={14} />
-                Matrika Control Room
+                Matrica Control Room
               </div>
 
               {/* Heading */}
@@ -142,11 +142,11 @@ const HomePage = ({ isDarkMode }: ThemeProps) => {
                   isDarkMode ? 'text-[#00e5ff]' : 'text-blue-800 font-black'
                 }`}>
                   <Cpu size={18} />
-                  The Matrika
+                  The Matrica
                 </h2>
 
                 <p className={`mt-4 leading-8 ${subText}`}>
-                  Matrika is an AI-powered esports sponsorship intelligence
+                  Matrica is an AI-powered esports sponsorship intelligence
                   platform built specifically for Valorant. It combines tournament
                   statistics, player performance, audience reach, social influence,
                   and AI-driven insights to recommend the most valuable sponsorship
@@ -498,7 +498,7 @@ const Sponsors = ({ isDarkMode }: ThemeProps) => {
 
           <div className={`${innerCardClass} rounded-xl p-4 shadow-sm`}>
             <h3 className="text-sm font-extrabold uppercase tracking-widest text-[#00e5ff] mb-2 flex items-center gap-2 drop-shadow-sm">
-              <Sparkles size={14} /> Matrika AI Analysis
+              <Sparkles size={14} /> Matrica AI Analysis
             </h3>
             <p className={`whitespace-pre-wrap text-xs leading-relaxed font-bold transition-colors duration-700 ${isDarkMode ? 'text-slate-300' : 'text-slate-900'}`}>
               {summary || 'No AI summary available for this result yet.'}
@@ -567,7 +567,7 @@ const Chat = ({ isDarkMode, messages, setMessages }: ChatProps) => {
       if (axios.isCancel(err)) {
         console.log('Request canceled by user');
       } else {
-        setMessages(prev => [...prev, { role: 'ai', content: 'Error connecting to Matrika backend.' }])
+        setMessages(prev => [...prev, { role: 'ai', content: 'Error connecting to Matrica backend.' }])
       }
     } finally {
       setLoading(false)
@@ -702,7 +702,7 @@ const Chat = ({ isDarkMode, messages, setMessages }: ChatProps) => {
             <div className="h-1.5 w-1.5 bg-[#00e5ff] rounded-full animate-ping" />
             <div className="h-1.5 w-1.5 bg-[#00e5ff] rounded-full animate-ping delay-75" />
             <div className="h-1.5 w-1.5 bg-[#00e5ff] rounded-full animate-ping delay-150" />
-            Matrika is thinking...
+            Matrica is thinking...
           </div>
         </div>}
       </div>
@@ -712,7 +712,7 @@ const Chat = ({ isDarkMode, messages, setMessages }: ChatProps) => {
           className={`w-full rounded-xl p-4 pr-12 text-sm font-bold outline-none transition-all duration-700 focus:ring-1 focus:ring-[#00e5ff] shadow-[0_0_15px_rgba(0,0,0,0.3)] ${
             isDarkMode ? 'bg-black/60 text-white border border-white/10 focus:border-[#00e5ff]' : 'bg-white/90 text-slate-900 border-transparent backdrop-blur-md focus:border-[#00e5ff]'
           }`}
-          placeholder="Transmit query to Matrika..." 
+          placeholder="Transmit query to Matrica..." 
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleSend()}
@@ -795,7 +795,7 @@ function App() {
         >
           <img
             src={matricaLogo}
-            alt="Matrika logo"
+            alt="Matrica logo"
             className={`h-10 w-10 object-contain group-hover:scale-110 transition-transform ${
               isDarkMode ? 'drop-shadow-[0_0_12px_rgba(0,229,255,0.8)] animate-logo-glow' : 'drop-shadow-sm'
             }`}
@@ -806,7 +806,7 @@ function App() {
                 ? 'text-white drop-shadow-[0_0_10px_rgba(0,229,255,0.6)] animate-title-glow' 
                 : 'text-blue-950 drop-shadow-sm font-black'
             }`}>
-              MATRIKA
+              MATRICA
             </h2>
             <p className={`mt-0.5 text-[9px] font-black uppercase tracking-widest transition-colors duration-700 ${
               isDarkMode ? 'text-[#00e5ff]' : 'text-blue-700 font-black'

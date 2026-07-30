@@ -19,7 +19,7 @@ export default function Footer({ isDarkMode }: FooterProps) {
         <div className="flex items-center gap-2 shrink-0">
           <img
             src={matricaLogo}
-            alt="Matrika Logo"
+            alt="Matrica Logo"
             className="h-5 w-5 object-contain drop-shadow-sm"
           />
           <span
@@ -27,7 +27,7 @@ export default function Footer({ isDarkMode }: FooterProps) {
               isDarkMode ? 'text-white' : 'text-slate-950 font-black'
             }`}
           >
-            MATRIKA
+            MATRICA
           </span>
           <span className="opacity-40">•</span>
           <span
