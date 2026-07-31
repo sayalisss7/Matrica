@@ -1,12 +1,15 @@
 import { useState, useEffect, useRef } from 'react'
 import { Routes, Route, NavLink } from 'react-router-dom'
-import { Home, MessageSquare, BarChart2, Moon, Sun, Sparkles, Cpu, Crosshair, ArrowRight, TrendingUp, Activity, XCircle, Edit2, Square, Check, X } from 'lucide-react'
+import { Home, MessageSquare, BarChart2, Moon, Sun, Sparkles, Cpu, Crosshair, ArrowRight, TrendingUp, Activity, XCircle, Edit2, Square, Check, X, Bot, User } from 'lucide-react'
 import axios from 'axios'
+import SponsorshipBookingAgent from './components/SponsorshipBookingAgent'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import Dashboard from './Dashboard'
 import IntroScreen from './IntroScreen'
 import Footer from './Footer'
+import PlayerPortal from './components/PlayerPortal'
+
 
 import matricaLogo from './assets/matrica-logo.png'
 import valorantBg from './assets/valorant-bg.jpg'
@@ -75,6 +78,7 @@ const HomePage = ({ isDarkMode }: ThemeProps) => {
       ]
     }
   ]);
+
 
   useEffect(() => {
     axios.get('https://matrica-backend.jollyplant-fd7887aa.centralindia.azurecontainerapps.io/api/dashboard/recommendations')
@@ -265,6 +269,7 @@ const Sponsors = ({ isDarkMode }: ThemeProps) => {
   const [results, setResults] = useState<any>(null)
   const [error, setError] = useState('')
   const [scrollZoom, setScrollZoom] = useState(1)
+  const [selectedPlayerForBooking, setSelectedPlayerForBooking] = useState<any>(null);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const scrollTop = e.currentTarget.scrollTop
@@ -335,10 +340,14 @@ const Sponsors = ({ isDarkMode }: ThemeProps) => {
     setLoading(true)
     setError('')
     try {
-      const res = await axios.post('https://matrica-backend.jollyplant-fd7887aa.centralindia.azurecontainerapps.io/api/match_sponsor', {
+      const res = await axios.post('http://localhost:8000/api/match_sponsor', {
         budget: numBudget, popWeight, repWeight, skillWeight
       })
       setResults(res.data)
+
+      if (res.data.auto_book_status) {
+        console.log(`Agent Action: ${res.data.auto_book_status}`);
+      }
     } catch (err: any) {
       setError(err.message || 'Error connecting to backend')
     } finally {
@@ -475,7 +484,7 @@ const Sponsors = ({ isDarkMode }: ThemeProps) => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             {players.map((p: any, i: number) => (
               <div key={i} className={`transition-all duration-700 ease-in-out ${innerCardClass} relative overflow-hidden rounded-xl p-4 hover:border-[#00e5ff]/50 group shadow-md`}>
-                <div className="absolute inset-0 bg-gradient-to-br from-[#00e5ff]/15 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="absolute inset-0 bg-gradient-to-br from-[#00e5ff]/15 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                 {i === 0 && <div className={isDarkMode ? "absolute top-0 right-0 bg-[#00e5ff] text-black font-black text-[10px] px-3 py-1 rounded-bl-lg uppercase tracking-wider shadow-[0_0_8px_rgba(0,229,255,0.8)]" : "absolute top-0 right-0 bg-blue-700 text-white font-black text-[10px] px-3 py-1 rounded-bl-lg uppercase tracking-wider shadow-md"}>TOP MATCH</div>}
                 
                 <h3 className={`mb-1 text-lg font-black uppercase tracking-wide ${pageText}`}>{p.name}</h3>
@@ -491,10 +500,36 @@ const Sponsors = ({ isDarkMode }: ThemeProps) => {
                     <span className="text-slate-900 dark:text-white transition-colors duration-700">Cost:</span> 
                     <span className="brand-font drop-shadow-sm">₹{p.cost.toLocaleString()}</span>
                   </div>
+                  <div className="mt-4 flex justify-center border-t pt-4 border-slate-700">
+                    {p.is_currently_sponsored ? (
+                      <span className="w-full text-center py-2 px-4 rounded-xl bg-slate-800 text-slate-500 font-black uppercase text-xs tracking-wider border border-slate-700 cursor-not-allowed">
+                        🔒 Currently Sponsored
+                      </span>
+                    ) : (
+                      <button 
+                        onClick={() => setSelectedPlayerForBooking(p)}
+                        className={`relative z-10 w-full py-2 px-4 rounded-xl font-black uppercase text-xs tracking-wider transition-all shadow-md flex items-center justify-center gap-2 ${
+                          isDarkMode 
+                            ? 'bg-[#00e5ff] text-black hover:bg-white hover:shadow-[0_0_15px_rgba(0,229,255,0.6)]' 
+                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                        }`}
+                      >
+                        <Bot size={16} /> Propose Sponsorship
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
           </div>
+
+          {selectedPlayerForBooking && (
+            <SponsorshipBookingAgent 
+              player={selectedPlayerForBooking} 
+              onClose={() => setSelectedPlayerForBooking(null)} 
+              isDarkMode={isDarkMode} 
+            />
+          )}
 
           <div className={`${innerCardClass} rounded-xl p-4 shadow-sm`}>
             <h3 className="text-sm font-extrabold uppercase tracking-widest text-[#00e5ff] mb-2 flex items-center gap-2 drop-shadow-sm">

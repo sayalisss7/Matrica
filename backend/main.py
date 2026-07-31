@@ -9,8 +9,11 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from pydantic import BaseModel
 from backend.agents.task_router import handle_query
+from backend.routers import sponsorships
 
 app = FastAPI(title="Matrica API", description="AI Powered Esports Sponsorship Intelligence Platform")
+
+app.include_router(sponsorships.router, prefix="/api/sponsorships", tags=["sponsorships"])
 
 app.add_middleware(
     CORSMiddleware,
@@ -152,74 +155,81 @@ def get_dashboard_stats(category: str = "kills"):
         with engine.connect() as conn:
             if category == "kills":
                 query_str = """
-                    SELECT p.player, SUM(f.kills) as val
+                    SELECT p.player, SUM(CAST(f.kills AS FLOAT)) as metric_val
                     FROM dim_players p
                     JOIN fact_player_stats f ON p.player_id = f.player_id
+                    WHERE f.kills IS NOT NULL
                     GROUP BY p.player
-                    ORDER BY val DESC NULLS LAST
+                    ORDER BY metric_val DESC NULLS LAST
                     LIMIT 10
                 """
             elif category == "kd":
                 query_str = """
-                    SELECT p.player, AVG(f.killsdeaths) as val
+                    SELECT p.player, AVG(CAST(f.killsdeaths AS FLOAT)) as metric_val
                     FROM dim_players p
                     JOIN fact_player_stats f ON p.player_id = f.player_id
+                    WHERE f.killsdeaths IS NOT NULL
                     GROUP BY p.player
-                    ORDER BY val DESC NULLS LAST
+                    ORDER BY metric_val DESC NULLS LAST
                     LIMIT 10
                 """
             elif category == "acs":
                 query_str = """
-                    SELECT p.player, AVG(f.average_combat_score) as val
+                    SELECT p.player, AVG(CAST(f.average_combat_score AS FLOAT)) as metric_val
                     FROM dim_players p
                     JOIN fact_player_stats f ON p.player_id = f.player_id
+                    WHERE f.average_combat_score IS NOT NULL
                     GROUP BY p.player
-                    ORDER BY val DESC NULLS LAST
+                    ORDER BY metric_val DESC NULLS LAST
                     LIMIT 10
                 """
             elif category == "hs":
                 query_str = """
-                    SELECT p.player, AVG(CAST(REPLACE(f.headshot_, '%', '') AS FLOAT)) as val
+                    SELECT p.player, AVG(CAST(REPLACE(CAST(f.headshot_ AS TEXT), '%', '') AS FLOAT)) as metric_val
                     FROM dim_players p
                     JOIN fact_player_stats f ON p.player_id = f.player_id
+                    WHERE f.headshot_ IS NOT NULL AND CAST(REPLACE(CAST(f.headshot_ AS TEXT), '%', '') AS FLOAT) > 0
                     GROUP BY p.player
-                    ORDER BY val DESC NULLS LAST
+                    ORDER BY metric_val DESC NULLS LAST
                     LIMIT 10
                 """
             elif category == "popularity":
                 query_str = """
-                    SELECT player_name as player, popularity as val
+                    SELECT player_name as player, CAST(popularity AS FLOAT) as metric_val
                     FROM dim_player_popularity
-                    ORDER BY val DESC NULLS LAST
+                    WHERE popularity IS NOT NULL
+                    ORDER BY metric_val DESC NULLS LAST
                     LIMIT 10
                 """
             elif category == "score":
                 query_str = """
-                    SELECT p.player, ROUND(AVG(f.rating) * 100, 0) as val
+                    SELECT p.player, ROUND(AVG(CAST(f.rating AS FLOAT)) * 100, 0) as metric_val
                     FROM dim_players p
                     JOIN fact_player_stats f ON p.player_id = f.player_id
+                    WHERE f.rating IS NOT NULL
                     GROUP BY p.player
-                    ORDER BY val DESC NULLS LAST
+                    ORDER BY metric_val DESC NULLS LAST
                     LIMIT 10
                 """
             elif category == "first_kills":
                 query_str = """
-                    SELECT p.player, SUM(f.first_kills) as val
+                    SELECT p.player, SUM(CAST(f.first_kills AS FLOAT)) as metric_val
                     FROM dim_players p
                     JOIN fact_player_stats f ON p.player_id = f.player_id
+                    WHERE f.first_kills IS NOT NULL
                     GROUP BY p.player
-                    ORDER BY val DESC NULLS LAST
+                    ORDER BY metric_val DESC NULLS LAST
                     LIMIT 10
                 """
             elif category.startswith("agent_"):
                 agent_name = category.replace("agent_", "")
                 query_str = f"""
-                    SELECT p.player, ROUND(AVG(f.rating) * 100, 0) as val
+                    SELECT p.player, ROUND(AVG(CAST(f.rating AS FLOAT)) * 100, 0) as metric_val
                     FROM dim_players p
                     JOIN fact_player_stats f ON p.player_id = f.player_id
-                    WHERE f.agents LIKE '%{agent_name}%'
+                    WHERE f.agents LIKE '%{agent_name}%' AND f.rating IS NOT NULL
                     GROUP BY p.player
-                    ORDER BY val DESC NULLS LAST
+                    ORDER BY metric_val DESC NULLS LAST
                     LIMIT 10
                 """
             else:
@@ -233,14 +243,73 @@ def get_dashboard_stats(category: str = "kills"):
             return data
     except Exception as e:
         print(f"Error fetching dashboard stats: {e}")
-        # Return mock data if DB fails (or sleeps)
-        return [
-            {"name": "TenZ", "value": 120},
-            {"name": "Demon1", "value": 115},
-            {"name": "Aspas", "value": 110},
-            {"name": "Boaster", "value": 90},
-            {"name": "Derke", "value": 85}
-        ]
+        # Return dynamic mock data if DB fails (or sleeps) so local testing works
+        if category == "hs":
+            return [
+                {"name": "Less", "value": 45.2},
+                {"name": "Alfajer", "value": 42.1},
+                {"name": "Demon1", "value": 40.5},
+                {"name": "Leo", "value": 38.9},
+                {"name": "Suygetsu", "value": 37.4},
+                {"name": "Chronicle", "value": 35.8},
+                {"name": "Shao", "value": 34.2},
+                {"name": "Mako", "value": 33.1},
+                {"name": "Derke", "value": 31.5},
+                {"name": "Aspas", "value": 30.0}
+            ]
+        elif category == "score" or category == "acs":
+            return [
+                {"name": "Demon1", "value": 285},
+                {"name": "Aspas", "value": 270},
+                {"name": "Derke", "value": 265},
+                {"name": "Leo", "value": 250},
+                {"name": "Alfajer", "value": 245},
+                {"name": "Something", "value": 240},
+                {"name": "Jinggg", "value": 235},
+                {"name": "Chronicle", "value": 230},
+                {"name": "Sayaplayer", "value": 225},
+                {"name": "Keznit", "value": 220}
+            ]
+        elif category.startswith("agent_killjoy"):
+            return [
+                {"name": "Alfajer", "value": 280},
+                {"name": "Less", "value": 275},
+                {"name": "Suygetsu", "value": 260},
+                {"name": "Meteor", "value": 255},
+                {"name": "Ardiis", "value": 240}
+            ]
+        elif category.startswith("agent_jett"):
+            return [
+                {"name": "Demon1", "value": 290},
+                {"name": "Aspas", "value": 285},
+                {"name": "Derke", "value": 280},
+                {"name": "Something", "value": 275},
+                {"name": "KangKang", "value": 265}
+            ]
+        elif category.startswith("agent_omen"):
+            return [
+                {"name": "Mako", "value": 250},
+                {"name": "Mindfreak", "value": 245},
+                {"name": "Marved", "value": 240},
+                {"name": "Boaster", "value": 230},
+                {"name": "S0m", "value": 225}
+            ]
+        elif category.startswith("agent_viper"):
+            return [
+                {"name": "Nats", "value": 260},
+                {"name": "Mako", "value": 255},
+                {"name": "Shao", "value": 250},
+                {"name": "SugarZ3ro", "value": 245},
+                {"name": "S0m", "value": 240}
+            ]
+        else:
+            return [
+                {"name": "TenZ", "value": 120},
+                {"name": "Demon1", "value": 115},
+                {"name": "Aspas", "value": 110},
+                {"name": "Boaster", "value": 90},
+                {"name": "Derke", "value": 85}
+            ]
 
 if __name__ == "__main__":
     uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)

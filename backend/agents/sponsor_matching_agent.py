@@ -27,6 +27,7 @@ def get_ranked_players(budget, pop_w, rep_w, skill_w):
             # Join dim_player_popularity to get real popularity and reputation
             query = text("""
                 SELECT 
+                    p.player_id,
                     p.player as "Player_Name", 
                     pop.popularity as popularity_score, 
                     pop.reputation as reputation_score, 
@@ -35,8 +36,9 @@ def get_ranked_players(budget, pop_w, rep_w, skill_w):
                 FROM dim_players p
                 LEFT JOIN fact_player_stats f ON p.player_id = f.player_id
                 LEFT JOIN dim_player_popularity pop ON LOWER(pop.player_name) = LOWER(p.player)
-                WHERE (ABS(hashtext(p.player)) % 40000) + 10000 <= :budget
-                GROUP BY p.player, pop.popularity, pop.reputation
+                WHERE ((ABS(hashtext(p.player)) % 40000) + 10000) <= :budget
+                AND (p.is_currently_sponsored IS NULL OR p.is_currently_sponsored = FALSE)
+                GROUP BY p.player_id, p.player, pop.popularity, pop.reputation
             """)
             
             result = conn.execute(query, {"budget": budget})
@@ -44,7 +46,8 @@ def get_ranked_players(budget, pop_w, rep_w, skill_w):
             seen_players = set()
             ranked_players = []
             for row in result:
-                name = row[0]
+                pid = row[0]
+                name = row[1]
                 
                 # Deduplicate players like f0rsaken and f0rsakeN
                 if name.lower() in seen_players:
@@ -52,10 +55,10 @@ def get_ranked_players(budget, pop_w, rep_w, skill_w):
                 seen_players.add(name.lower())
                 
                 # If player is not in the CSV, fallback to 50
-                pop = row[1] if row[1] is not None else 50.0
-                rep = row[2] if row[2] is not None else 50.0
-                cost = row[3] or budget
-                skill = (row[4] or 1.0) * 50.0  # Convert 1.0 rating to 50 scale roughly
+                pop = row[2] if row[2] is not None else 50.0
+                rep = row[3] if row[3] is not None else 50.0
+                cost = row[4] or budget
+                skill = (row[5] or 1.0) * 50.0  # Convert 1.0 rating to 50 scale roughly
                 
                 # ---------------------------------------------------------
                 # THIS IS THE DYNAMIC MATH SCORE (No Black Box Machine Learning!)
@@ -63,6 +66,7 @@ def get_ranked_players(budget, pop_w, rep_w, skill_w):
                 score = (pop * pw) + (rep * rw) + (skill * sw)
                 
                 ranked_players.append({
+                    "player_id": pid,
                     "name": name,
                     "score": round(score, 1),
                     "popularity": pop,
@@ -83,9 +87,9 @@ def get_ranked_players(budget, pop_w, rep_w, skill_w):
         print(f"Using mock data because DB query failed (columns missing or empty): {e}")
         # Fallback Mock Data so the frontend still works beautifully while you set up PostgreSQL!
         return [
-            {"name": "TenZ", "score": 92.5, "popularity": 95, "reputation": 80, "skill": 88, "cost": 45000},
-            {"name": "Demon1", "score": 89.0, "popularity": 70, "reputation": 75, "skill": 98, "cost": 30000},
-            {"name": "Boaster", "score": 85.5, "popularity": 85, "reputation": 95, "skill": 75, "cost": 25000}
+            {"player_id": 1, "name": "TenZ", "score": 92.5, "popularity": 95, "reputation": 80, "skill": 88, "cost": 45000},
+            {"player_id": 2, "name": "Demon1", "score": 89.0, "popularity": 70, "reputation": 75, "skill": 98, "cost": 30000},
+            {"player_id": 3, "name": "Boaster", "score": 85.5, "popularity": 85, "reputation": 95, "skill": 75, "cost": 25000}
         ]
 
 def generate_sponsor_summary(ranked_players, pop_w, rep_w, skill_w):
