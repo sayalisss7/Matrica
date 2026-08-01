@@ -70,12 +70,5 @@ npm run dev
 Check out the full video demonstration of Matrica in action:
 [**Watch the Project Demo on Google Drive**](https://drive.google.com/file/d/1e_g4-KBUige_irdxTMkc7TKEHj_a4XDX/view?usp=sharing)
 
-## 📸 Screenshots
-
-![Screenshot 1](frontend/src/assets/1.png)
-![Screenshot 2](frontend/src/assets/2.png)
-![Screenshot 3](frontend/src/assets/3.png)
-![Screenshot 4](frontend/src/assets/4.png)
-
 ---
 *Built for the VCT 2025 Season. Data modeling and architecture designed for enterprise scalability.*
