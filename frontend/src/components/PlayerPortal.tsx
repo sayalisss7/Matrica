@@ -26,7 +26,7 @@ export default function PlayerPortal() {
     if (!selectedPlayerId) return;
     setLoading(true);
     try {
-      const res = await axios.get(`http://localhost:8000/api/sponsorships/players/${selectedPlayerId}/proposals`);
+      const res = await axios.get(`https://matrica-backend.jollyplant-fd7887aa.centralindia.azurecontainerapps.io/api/sponsorships/players/${selectedPlayerId}/proposals`);
       setProposals(res.data);
     } catch (err) {
       console.error("Failed to fetch proposals", err);

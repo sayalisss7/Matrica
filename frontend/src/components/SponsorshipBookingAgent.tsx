@@ -47,7 +47,7 @@ export default function SponsorshipBookingAgent({ player, onClose }: Sponsorship
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   useEffect(() => {
-    axios.get('http://localhost:8000/api/sponsorships/durations')
+    axios.get('https://matrica-backend.jollyplant-fd7887aa.centralindia.azurecontainerapps.io/api/sponsorships/durations')
       .then(res => {
         setDurations(res.data);
         if (res.data.length > 0) {
@@ -68,7 +68,7 @@ export default function SponsorshipBookingAgent({ player, onClose }: Sponsorship
 
   useEffect(() => {
     if (selectedDuration && player?.player_id) {
-      axios.get(`http://localhost:8000/api/sponsorships/players/${player.player_id}/budget-range?duration_id=${selectedDuration}`)
+      axios.get(`https://matrica-backend.jollyplant-fd7887aa.centralindia.azurecontainerapps.io/api/sponsorships/players/${player.player_id}/budget-range?duration_id=${selectedDuration}`)
         .then(res => {
           setBudgetRange({ 
              min_budget: res.data.min_budget, 
@@ -88,7 +88,7 @@ export default function SponsorshipBookingAgent({ player, onClose }: Sponsorship
   useEffect(() => {
     if (player?.player_id && !message) {
       setGeneratingMessage(true);
-      axios.post(`http://localhost:8000/api/sponsorships/players/${player.player_id}/generate-proposal`, {
+      axios.post(`https://matrica-backend.jollyplant-fd7887aa.centralindia.azurecontainerapps.io/api/sponsorships/players/${player.player_id}/generate-proposal`, {
         player_name: player.name || 'Player',
         tone: 'Professional',
         current_draft: ''
@@ -104,7 +104,7 @@ export default function SponsorshipBookingAgent({ player, onClose }: Sponsorship
     if (!message || message.length < 50) return;
     const timeoutId = setTimeout(() => {
       setLoadingScore(true);
-      axios.post(`http://localhost:8000/api/sponsorships/players/${player.player_id}/score-proposal`, {
+      axios.post(`https://matrica-backend.jollyplant-fd7887aa.centralindia.azurecontainerapps.io/api/sponsorships/players/${player.player_id}/score-proposal`, {
         proposal_text: message,
         player_name: player.name || 'Player',
         offer_amount: budgetRange?.base_value || 0
@@ -119,7 +119,7 @@ export default function SponsorshipBookingAgent({ player, onClose }: Sponsorship
   const handleAiEdit = (tone: string) => {
     if (!message) return;
     setGeneratingMessage(true);
-    axios.post(`http://localhost:8000/api/sponsorships/players/${player.player_id}/generate-proposal`, {
+    axios.post(`https://matrica-backend.jollyplant-fd7887aa.centralindia.azurecontainerapps.io/api/sponsorships/players/${player.player_id}/generate-proposal`, {
       player_name: player.name || 'Player',
       tone: tone,
       current_draft: message
@@ -130,7 +130,7 @@ export default function SponsorshipBookingAgent({ player, onClose }: Sponsorship
 
   const handleFindBestTime = () => {
     setLoadingCalendar(true);
-    axios.post(`http://localhost:8000/api/sponsorships/players/${player.player_id}/calendar-match`, {
+    axios.post(`https://matrica-backend.jollyplant-fd7887aa.centralindia.azurecontainerapps.io/api/sponsorships/players/${player.player_id}/calendar-match`, {
       duration_minutes: meetingDuration
     }).then(res => {
       setAiSlots(res.data.slots);
@@ -165,7 +165,7 @@ export default function SponsorshipBookingAgent({ player, onClose }: Sponsorship
     
     try {
       const finalMeetingTime = meetingMode === 'ai' ? selectedSlot : meetingDate;
-      const res = await axios.post(`http://localhost:8000/api/sponsorships/players/${player.player_id}/proposals`, {
+      const res = await axios.post(`https://matrica-backend.jollyplant-fd7887aa.centralindia.azurecontainerapps.io/api/sponsorships/players/${player.player_id}/proposals`, {
         brand_id: 1, 
         duration_id: selectedDuration,
         actual_offer_amount: budgetRange?.base_value || 0,

@@ -340,7 +340,7 @@ const Sponsors = ({ isDarkMode }: ThemeProps) => {
     setLoading(true)
     setError('')
     try {
-      const res = await axios.post('http://localhost:8000/api/match_sponsor', {
+      const res = await axios.post('https://matrica-backend.jollyplant-fd7887aa.centralindia.azurecontainerapps.io/api/match_sponsor', {
         budget: numBudget, popWeight, repWeight, skillWeight
       })
       setResults(res.data)

@@ -29,9 +29,9 @@ export default function ProposalReviewModal({ proposal, onClose, onStatusChange 
     setIsSubmitting(true);
     try {
       if (action === 'ACCEPT') {
-        await axios.post(`http://localhost:8000/api/sponsorships/proposals/${proposal.proposal_id}/accept`);
+        await axios.post(`https://matrica-backend.jollyplant-fd7887aa.centralindia.azurecontainerapps.io/api/sponsorships/proposals/${proposal.proposal_id}/accept`);
       } else {
-        await axios.post(`http://localhost:8000/api/sponsorships/proposals/${proposal.proposal_id}/respond`, {
+        await axios.post(`https://matrica-backend.jollyplant-fd7887aa.centralindia.azurecontainerapps.io/api/sponsorships/proposals/${proposal.proposal_id}/respond`, {
           action: action,
           message: action === 'COUNTER' ? counterMessage : ''
         });
