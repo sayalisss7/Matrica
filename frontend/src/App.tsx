@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Routes, Route, NavLink } from 'react-router-dom'
-import { Home, MessageSquare, BarChart2, Moon, Sun, Sparkles, Cpu, Crosshair, ArrowRight, TrendingUp, Activity, XCircle, Edit2, Square, Check, X, Bot, User } from 'lucide-react'
+import { Home, MessageSquare, BarChart2, Moon, Sun, Sparkles, Cpu, Crosshair, ArrowRight, TrendingUp, Activity, XCircle, Edit2, Square, Check, X, Bot } from 'lucide-react'
 import axios from 'axios'
 import SponsorshipBookingAgent from './components/SponsorshipBookingAgent'
 import ReactMarkdown from 'react-markdown'
@@ -8,7 +8,7 @@ import remarkGfm from 'remark-gfm'
 import Dashboard from './Dashboard'
 import IntroScreen from './IntroScreen'
 import Footer from './Footer'
-import PlayerPortal from './components/PlayerPortal'
+
 
 
 import matricaLogo from './assets/matrica-logo.png'
